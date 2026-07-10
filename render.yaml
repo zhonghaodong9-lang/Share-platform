@@ -8,6 +8,3 @@
     envVars:
       - key: PORT
         value: "10000"
-      - key: DATA_DIR
-        value: /var/data
-    healthCheckPath: /

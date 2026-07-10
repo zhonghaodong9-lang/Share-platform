@@ -1,13 +1,12 @@
 ﻿const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const url = require("url");
 
 const PORT = process.env.PORT || 3000;
+const PUBLIC_DIR = path.join(__dirname, "public");
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const DOCS_DIR = path.join(DATA_DIR, "documents");
 const LIB_DIR = path.join(DATA_DIR, "library");
-const PUBLIC_DIR = path.join(__dirname, "public");
 
 [DOCS_DIR, LIB_DIR].forEach(d => { try { fs.mkdirSync(d, { recursive: true }); } catch(e) {} });
 
@@ -74,7 +73,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
 
-  const pn = url.parse(req.url).pathname;
+  const pn = new URL(req.url, "http://localhost").pathname;
   const method = req.method;
 
   try {
@@ -181,15 +180,17 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ===== Static files =====
-    let filePath = path.join(PUBLIC_DIR, pn === "/" ? "index.html" : pn);
+    const indexPath = path.join(PUBLIC_DIR, "index.html");
+    const filePath = pn === "/" ? indexPath : path.join(PUBLIC_DIR, pn);
+
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
       const ext = path.extname(filePath);
       res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
-      res.end(fs.readFileSync(filePath));
-    } else {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      res.end(fs.readFileSync(path.join(PUBLIC_DIR, "index.html")));
+      return res.end(fs.readFileSync(filePath));
     }
+
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(fs.readFileSync(indexPath));
 
   } catch(e) {
     if (!res.headersSent) sendJSON(res, 500, { error: e.message });
@@ -198,6 +199,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log("=== 全球资讯素材平台 ===");
-  console.log("本地访问: http://localhost:" + PORT);
-  console.log("数据目录: " + DATA_DIR);
+  console.log("服务端口:", PORT);
+  console.log("数据目录:", DATA_DIR);
+  console.log("静态目录:", PUBLIC_DIR);
 });
