@@ -179,6 +179,30 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { success: true });
     }
 
+    // ===== AI Generation API =====
+    if (pn === "/api/ai/generate" && method === "POST") {
+      const body = await parseBody(req);
+      const { type, topic, duration, audience, style, apiKey } = body;
+      if (!topic) return sendJSON(res, 400, { error: "Missing topic" });
+      const prompt = "你是一个专业的短视频创作者。请为主题「" + topic + "」创作内容。时长：" + (duration || "180") + "秒。请用中文回复。";
+      if (apiKey) {
+        try {
+          const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+            body: JSON.stringify({ model: "gpt-3.5-turbo", messages: [{ role: "user", content: prompt }], temperature: 0.8, max_tokens: 2000 })
+          });
+          const result = await resp.json();
+          if (result.choices && result.choices[0]) {
+            return sendJSON(res, 200, { success: true, data: result.choices[0].message.content });
+          }
+          return sendJSON(res, 500, { error: result.error?.message || "API error" });
+        } catch(e) {
+          return sendJSON(res, 500, { error: e.message });
+        }
+      }
+      return sendJSON(res, 200, { success: false, error: "No API key" });
+    }
     // ===== Static files =====
     const indexPath = path.join(PUBLIC_DIR, "index.html");
     const filePath = pn === "/" ? indexPath : path.join(PUBLIC_DIR, pn);
