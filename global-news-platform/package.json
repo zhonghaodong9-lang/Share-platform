@@ -1,0 +1,14 @@
+﻿{
+  "name": "global-news-platform",
+  "version": "1.0.0",
+  "description": "全球资讯素材平台 - 协作式新闻采集与文稿编辑",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
