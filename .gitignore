@@ -1,6 +1,8 @@
-﻿node_modules/
-data/
+# 保护私密配置文件
 .env
-*.log
+
+# 临时/生成文件
+__pycache__/
+*.pyc
+reports/
 .DS_Store
-Thumbs.db

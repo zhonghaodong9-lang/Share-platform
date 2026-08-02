@@ -1,61 +1,94 @@
-﻿# 全球资讯素材平台 - 在线协作版
+# 📈 A股专业级每日盘后自动复盘与智投系统
 
-## 项目简介
-一个支持多人实时协作的全球新闻采集与文稿编辑平台。你和你的同事可以同时在线上浏览新闻、编辑文稿、管理素材。
+一个高度可定制、功能全面的 **A股每日盘后自动化复盘与智投分析系统**。系统不仅涵盖行情基本面与短线情绪，还深度融合了**微观资金流向（主力/机构/龙虎榜）**、**投行券商研报情报**以及**海外市场（美股/中概/汇率/A50）与中美板块映射关系**，支持通过飞书、钉钉、企业微信机器人及微信 WxPusher 广播推送报告。
 
-## 功能
-- 📰 全球新闻聚合（BBC、Reuters、TechCrunch、环球网等）
-- 📝 实时协作文稿编辑器
-- 📚 素材库管理
-- 🔄 SSE 实时同步
+---
 
-## 快速部署（二选一）
+## ✨ 核心特色与功能列表
 
-### 方式一：Render.com（推荐，免费）
+1. **⚡ 全景数据采集**
+   - **大盘指数与量能**：抓取上证、深证、创业板、科创50收盘价、涨跌幅及三市成交额对比。
+   - **市场全景分布**：全场上涨/下跌家数、涨停/跌停家数及炸板率。
+2. **💰 资金量与资金流向**
+   - **主力资金板块 TOP**：领涨/主力资金净流入前 5 板块与个股。
+   - **机构/游资龙虎榜**：机构买入额及知名游资席位异动明细。
+3. **🌐 海外市场与中美板块映射**
+   - **隔夜外资走势**：道琼斯、纳斯达克、标普500、费城半导体 SOX、富时 A50 与离岸人民币汇率。
+   - **中美映射逻辑引擎**：比对美股英伟达/特斯拉/礼来/苹果大涨对 A 股算力、智驾、创新药、果链的实际驱动传导效应。
+4. **📑 投行与券商研报精选**
+   - 抓取头部券商（中信、中金、招商等）每日最新研报与机构评级变动。
+5. **🪜 短线情绪周期与梯队状态机**
+   - 计算 0~100 市场情绪温度得分，判定处于“发酵、高潮、分歧、修复或冰点”阶段。
+   - 输出完整连板高度梯队。
+6. **🤖 AI / 智投策略总结**
+   - 支持接入 **DeepSeek** / OpenAI / 兼容 OpenAI 格式的大模型生成精炼研报，未配置 Key 时自动启用结构化智投规则引擎。
+7. **📡 云端定时无服务器运行**
+   - 配置 GitHub Actions 工作流，交易日北京时间 **15:30** 自动免费运行并发送报告。
 
-1. 打开 https://dashboard.render.com 注册账号
-2. 点击 "New +" → "Web Service"
-3. 选择 "Deploy from GitHub"（先把本项目上传到 GitHub）
-4. 连接你的 GitHub 仓库
-5. Render 会自动识别 `render.yaml` 配置
-6. 点击 "Deploy"，等待 2-3 分钟
-7. 部署完成会得到一个永久网址
+---
 
-### 方式二：Railway.app（免费）
+## 🛠️ 快速开始与本地运行
 
-1. 打开 https://railway.app 注册
-2. 点击 "New Project" → "Deploy from GitHub repo"
-3. 连接项目仓库
-4. 部署完成即获得域名
-
-## 本地开发
-
-需要 Node.js 18+：
-
+### 1. 安装依赖
 ```bash
-npm install
-npm start
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-访问 http://localhost:3000
+### 2. 配置环境变量 (可选)
+复制环境变量模版并修改：
+```bash
+cp .env.example .env
+```
+根据需求填入消息推送 Webhook（飞书、钉钉、企微或 WxPusher）或 DeepSeek API Key。
 
-## 环境变量
+### 3. 执行测试/复盘
+- **本地测试预览**：
+  ```bash
+  python main.py --test
+  ```
+- **生成报告并触发推送**：
+  ```bash
+  python main.py --save --push
+  ```
+  生成的复盘报告将自动保存在 `./reports/daily_review_YYYYMMDD.md`。
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| PORT | 端口号 | 3000 |
-| DATA_DIR | 数据存储路径 | ./data |
+---
 
-## 项目结构
+## ☁️ 部署至 GitHub Actions 实现每日无感推送
+
+1. 将本项目推送至你的 GitHub 仓库。
+2. 进入 GitHub 仓库设置：`Settings` $\rightarrow$ `Secrets and variables` $\rightarrow$ `Actions`.
+3. 添加 Secrets 密钥（如 `FEISHU_WEBHOOK`、`DINGTALK_WEBHOOK` 或 `AI_API_KEY`）。
+4. 系统将在每交易日北京时间 **15:30** 自动触发，全自动发送每日盘后复盘！
+
+---
+
+## 📂 项目目录架构
 
 ```
-├─ server.js          # 后端服务器
-├─ package.json       # 依赖配置
-├─ render.yaml        # Render.com 部署配置
-├─ .env.example       # 环境变量示例
-├─ public/
-│  └─ index.html      # 前端页面
-└─ data/              # 数据存储（自动创建）
-   ├─ documents/
-   └─ library/
+智能选/
+├── config.py                 # 系统配置管理
+├── .env.example              # 环境变量示例
+├── requirements.txt          # 项目依赖定义
+├── main.py                   # 启动主程序
+├── data_fetchers/            # 数据采集模块
+│   ├── base_market.py        # 大盘行情、成交额、涨跌分布、连板梯队
+│   ├── money_flow.py         # 资金量、主力流向、机构/游资龙虎榜
+│   ├── overseas_market.py    # 美股SOX/中概/离岸人民币/A50
+│   └── research_reports.py   # 投行券商研报、机构评级
+├── analyzers/                # 逻辑与 AI 分析引擎
+│   ├── sentiment_analyzer.py # 情绪温度评分与情绪周期状态机
+│   ├── mapping_analyzer.py   # 中美板块映射驱动分析
+│   └── ai_agent.py           # DeepSeek/规则智投策略总结
+├── formatters/               # 报告排版
+│   └── report_formatter.py   # 渲染机构风采 Markdown
+├── notifiers/                # 消息推送服务
+│   └── push_service.py       # 飞书、钉钉、企微、WxPusher
+└── .github/workflows/        # 自动化工作流
+    └── daily_review.yml      # 交易日 15:30 自动触发
 ```
+
+---
+
+*免责声明：本项目包含的所有行情分析、机构研报及 AI 预测内容仅供量化选股与技术研究参考，不构成任何形式的投资建议或买卖依据。*
