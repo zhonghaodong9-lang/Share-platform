@@ -16,11 +16,11 @@ def markdown_to_clean_html(text):
 
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
-    基于用户精确定制的【宽基 ETF 放量监控】与【板块涨停家数 Top 3 梯队】HTML 智投日报
+    全新升级：包含【超级特大单个数(笔数)与平均大单金额】的 HTML 智投日报
     """
     now = datetime.datetime.now()
     
-    # 提取真实交易日日期（周末自动回溯为上周五，如 7月31日 / 2026年07月31日）
+    # 提取真实交易日日期
     raw_trade_date = market_data.get("trade_date", "")
     if not raw_trade_date:
         dt = now
@@ -92,12 +92,12 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 3. 精简空间连板梯队 HTML Badges (仅列1-2只代表标的)
+    # 3. 精简空间连板梯队 HTML Badges
     ladder_html = ""
     ladder = limit_info.get("ladder", {})
     if ladder:
         for height in sorted(ladder.keys(), reverse=True):
-            stocks = "、".join(ladder[height][:2]) # 仅保留 1-2 只龙头代表
+            stocks = "、".join(ladder[height][:2])
             ladder_html += f"""
             <div style="margin-bottom: 6px;">
                 <span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 800;">{height} 连板龙头</span>
@@ -180,15 +180,34 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 6. 超级特大单 (>5000万) 成交监控 HTML
+    # 6. 超级特大单 (>5000万) 笔数与平均大单金额 HTML
     ultra_orders_html = ""
     for uo in ultra_orders:
-        color = "#ef4444" if "🔴" in uo.get("type", "") else "#10b981"
+        stock = uo.get("stock")
+        code = uo.get("code")
+        order_count = uo.get("order_count", 1)
+        avg_amount = uo.get("avg_amount", 0.0)
+        net_amount = uo.get("net_amount", 0.0)
+        direction = uo.get("direction", "")
+        latest_detail = uo.get("latest_detail", "")
+
+        color = "#ef4444" if net_amount >= 0 else "#10b981"
+        net_str = f"+{net_amount:.2f} 亿元" if net_amount >= 0 else f"{net_amount:.2f} 亿元"
+
         ultra_orders_html += f"""
-        <div style="background: #ffffff; padding: 8px 10px; border-radius: 6px; margin-bottom: 4px; border-left: 3px solid {color}; display: table; width: 100%; box-sizing: border-box; font-size: 11px;">
-            <div style="display: table-cell; font-weight: 700; color: #0f172a;">[{uo.get('time')}] {uo.get('stock')}</div>
-            <div style="display: table-cell; text-align: center; font-weight: 800; color: {color};">{uo.get('type')}</div>
-            <div style="display: table-cell; text-align: right; font-weight: 800; color: {color};">{uo.get('amount')}</div>
+        <div style="background: #ffffff; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; font-size: 11px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+            <div style="display: table; width: 100%;">
+                <div style="display: table-cell; font-weight: 800; color: #0f172a; font-size: 12px;">{stock} <span style="color: #64748b; font-weight: normal;">({code})</span></div>
+                <div style="display: table-cell; text-align: center; font-weight: 800; color: {color};">{direction}</div>
+                <div style="display: table-cell; text-align: right; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">共 {order_count} 笔特大单</div>
+            </div>
+            <div style="display: table; width: 100%; margin-top: 6px; font-size: 11px; color: #334155;">
+                <div style="display: table-cell;">📏 单笔平均金额: <b style="color: #0f172a;">{avg_amount:.0f} 万元</b></div>
+                <div style="display: table-cell; text-align: right;">💰 累计大单净额: <b style="color: {color};">{net_str}</b></div>
+            </div>
+            <div style="font-size: 10px; color: #64748b; margin-top: 6px; background: #f8fafc; padding: 6px 8px; border-radius: 4px; border-left: 2px solid {color};">
+                ⏱️ <b>最新大单异动明细</b>：{latest_detail}
+            </div>
         </div>
         """
 
@@ -243,7 +262,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
     html = f"""
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 12px; border-radius: 14px; box-sizing: border-box; max-width: 600px; margin: 0 auto;">
     
-    <!-- 顶部 Banner 区域（遵循用户精确 UI 指令） -->
+    <!-- 顶部 Banner 区域 -->
     <div style="background: linear-gradient(135deg, #0f172a, #1e293b); color: #ffffff; padding: 18px 16px; border-radius: 12px; text-align: center; box-shadow: 0 4px 10px rgba(15,23,42,0.25);">
         <div style="font-size: 20px; font-weight: 900; letter-spacing: 0.5px; color: #ffffff;">{report_title}</div>
         <div style="font-size: 12px; color: #94a3b8; margin-top: 8px; display: flex; justify-content: center; align-items: center;">
@@ -290,14 +309,14 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
     </div>
 
-    <!-- 📊 用户新增指定模块：【宽基 ETF 成交量放量异动监控】 -->
+    <!-- 📊 【宽基 ETF 成交量放量异动监控】 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
         <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #0284c7; padding-left: 8px;">📊 宽基 ETF 异常放量监控 (大资金/国家队信号)</div>
         <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">监测成交量明显放大超 20% 的核心宽基 ETF：</div>
         {etf_cards_html}
     </div>
 
-    <!-- 🏆 用户新增指定模块：【板块涨停家数 Top 3 & 板块内龙头代表】 -->
+    <!-- 🏆 【板块涨停家数 Top 3 & 板块内龙头代表】 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
         <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #dc2626; padding-left: 8px;">🏆 板块涨停家数 Top 3 & 龙头代表梯队</div>
         <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">聚焦涨停聚集度最高的核心板块，仅列出 1~2 只代表性空间龙头：</div>
@@ -307,7 +326,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         {ladder_html}
     </div>
 
-    <!-- 🔥 板块资金分时轨迹与量价动态剖析 -->
+    <!-- 🔥 【板块资金分时轨迹与量价动态剖析】 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
         <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 6px; border-left: 4px solid #f97316; padding-left: 8px;">🔥 板块资金分时轨迹与量价动态剖析</div>
         <div style="font-size: 11px; color: #64748b; margin-bottom: 10px;">打破全天静态净流入滤镜，按交易时段切片监控真实意图：</div>
@@ -333,6 +352,13 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         {alert_cards_html}
     </div>
 
+    <!-- 💥 用户新增指定模块：【超级特大单 (>5000万) 笔数与平均大单金额监控】 -->
+    <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #ec4899; padding-left: 8px;">💥 超级特大单 (>5000万) 笔数与平均金额监控</div>
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">统计个股出现的超级大单总笔数(个数)、单笔平均金额与累计净额：</div>
+        {ultra_orders_html}
+    </div>
+
     <!-- 🏢 微观结构拆解：大容量中军 vs 边缘小票 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
         <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 10px; border-left: 4px solid #0284c7; padding-left: 8px;">🏢 内部微观结构：百亿大容量中军 vs 边缘小票</div>
@@ -342,12 +368,6 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
 
         <div style="font-size: 11px; font-weight: 700; color: #991b1b; margin-top: 10px; margin-bottom: 6px;">⚠️ 脱节脱靶警告：边缘短线高位妖股</div>
         {edge_html}
-    </div>
-
-    <!-- 💥 超级特大单 (>5000万) 成交监控 -->
-    <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #ec4899; padding-left: 8px;">💥 超级特大单 (单笔 > 5000 万) 异动监控</div>
-        {ultra_orders_html}
     </div>
 
     <!-- 📊 核心大盘指数表现 (勾稽对齐) -->
