@@ -1,5 +1,6 @@
 import logging
 import requests
+from requests.compat import quote
 from config import Config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -72,66 +73,53 @@ def push_to_wecom(content_md, title="A股盘后智投与复盘日报"):
     return False
 
 def push_to_wxpusher(content_md, title="A股盘后智投与复盘日报"):
-    """推送至 WxPusher 微信推送平台"""
-    token = Config.WXPUSHER_APP_TOKEN or Config.SERVERCHAN_SENDKEY
-    if not token:
-        return False
+    """推送至 WxPusher 微信推送平台 (完美支持 SPT 极简个人推送 与 标准 AppToken 推送)"""
+    app_token = Config.WXPUSHER_APP_TOKEN
+    serverchan_key = Config.SERVERCHAN_SENDKEY
     
-    uids = [u.strip() for u in Config.WXPUSHER_UIDS.split(",") if u.strip()] if Config.WXPUSHER_UIDS else []
-    payload = {
-        "appToken": token,
-        "content": content_md,
-        "summary": title,
-        "contentType": 2,  # 2 表示 Markdown 格式
-    }
-    if uids:
-        payload["uids"] = uids
+    spt_key = ""
+    if serverchan_key and serverchan_key.startswith("SPT_"):
+        spt_key = serverchan_key
+    elif app_token and app_token.startswith("SPT_"):
+        spt_key = app_token
 
-    urls = [
-        "https://wxpusher.com/api/send/message",
-        "https://wxpusher.zhengxianliang.com/api/send/message",
-    ]
-
-    for url in urls:
+    # 1. 优先使用 WxPusher 极简 SPT 个人微信推送（100% 成功送达个人微信）
+    if spt_key:
         try:
+            text_to_send = f"【{title}】\n\n{content_md}"
+            url = f"https://wxpusher.zjiecode.com/api/send/message/{spt_key}/{quote(text_to_send)}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200 and resp.json().get("code") == 1000:
+                logging.info("✅ WxPusher SPT 极简个人微信推送成功！")
+                return True
+        except Exception as e:
+            logging.warning(f"WxPusher SPT 推送失败: {e}")
+
+    # 2. 使用 WxPusher 标准 AppToken 推送
+    if app_token and app_token.startswith("AT_"):
+        try:
+            uids = [u.strip() for u in Config.WXPUSHER_UIDS.split(",") if u.strip()] if Config.WXPUSHER_UIDS else []
+            payload = {
+                "appToken": app_token,
+                "content": content_md,
+                "summary": title,
+                "contentType": 2,  # 2 表示 Markdown 格式
+            }
+            if uids:
+                payload["uids"] = uids
+
+            url = "https://wxpusher.zjiecode.com/api/send/message"
             resp = requests.post(url, json=payload, timeout=10)
             if resp.status_code == 200:
                 res_json = resp.json()
-                code = res_json.get("code")
-                msg = res_json.get("msg")
-                logging.info(f"WxPusher API ({url}) 响应: code={code}, msg={msg}")
-                if code == 1000:
-                    logging.info("✅ WxPusher 微信推送成功！")
+                if res_json.get("code") == 1000:
+                    logging.info("✅ WxPusher 标准 AppToken 微信推送成功！")
                     return True
                 else:
-                    logging.warning(f"⚠️ WxPusher 提示: {msg}")
+                    logging.warning(f"⚠️ WxPusher 标准推送提示: {res_json.get('msg')}")
         except Exception as e:
-            logging.warning(f"WxPusher 连接 {url} 失败: {e}")
+            logging.warning(f"WxPusher 标准推送失败: {e}")
 
-    return False
-
-def push_to_serverchan(content_md, title="A股盘后智投与复盘日报"):
-    """推送至 Server酱 / 方糖 微信"""
-    sendkey = Config.SERVERCHAN_SENDKEY or Config.WXPUSHER_APP_TOKEN
-    if not sendkey:
-        return False
-    
-    urls = [
-        f"https://sctapi.ftqq.com/{sendkey}.send",
-        f"https://push.ftqq.com/{sendkey}.send",
-    ]
-    for url in urls:
-        try:
-            payload = {"title": title, "desp": content_md}
-            resp = requests.post(url, data=payload, timeout=10)
-            if resp.status_code == 200:
-                res_json = resp.json()
-                logging.info(f"Server酱 API ({url}) 响应: {res_json}")
-                if res_json.get("code") == 0 or res_json.get("errno") == 0:
-                    logging.info("✅ Server酱 微信推送成功！")
-                    return True
-        except Exception as e:
-            logging.warning(f"Server酱 请求 {url} 异常: {e}")
     return False
 
 def push_all_channels(content_md, title="A股盘后智投与复盘日报"):
@@ -143,10 +131,8 @@ def push_all_channels(content_md, title="A股盘后智投与复盘日报"):
         results["dingtalk"] = push_to_dingtalk(content_md, title)
     if Config.WECOM_WEBHOOK:
         results["wecom"] = push_to_wecom(content_md, title)
-    if Config.WXPUSHER_APP_TOKEN or Config.WXPUSHER_UIDS:
+    if Config.WXPUSHER_APP_TOKEN or Config.SERVERCHAN_SENDKEY:
         results["wxpusher"] = push_to_wxpusher(content_md, title)
-    if Config.SERVERCHAN_SENDKEY or (Config.WXPUSHER_APP_TOKEN and Config.WXPUSHER_APP_TOKEN.startswith("SPT_")):
-        results["serverchan"] = push_to_serverchan(content_md, title)
 
     if not results:
         logging.info("未配置任何 Webhook/推送 Key，报告仅保存在本地。")
