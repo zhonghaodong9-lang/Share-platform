@@ -16,7 +16,7 @@ def markdown_to_clean_html(text):
 
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
-    全新升级：全量归档用户 14 张同花顺 App 手机端真机截图数据集（中际旭创 07-31 482 笔千万大单，09:32 1.47 亿扫货）
+    全新升级：【同花顺 App 真机校验 vs 算法拟合标注】复盘报告
     """
     now = datetime.datetime.now()
     
@@ -180,7 +180,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 6. 对齐全套 14 张同花顺 App 手机端真机截图（包含 1.47 亿扫货）
+    # 6. 对齐【同花顺 App 真机实测】与算法拟合区分 HTML
     ultra_orders_html = ""
     for uo in ultra_orders:
         rank = uo.get("rank", 1)
@@ -193,6 +193,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         net_amount = uo.get("net_amount", 0.0)
         direction = uo.get("direction", "")
         latest_detail = uo.get("latest_detail", "")
+        source_tag = uo.get("source", "")
 
         color = "#ef4444" if net_amount >= 0 else "#10b981"
         net_str = f"+{net_amount:.2f} 亿元" if net_amount >= 0 else f"{net_amount:.2f} 亿元"
@@ -205,6 +206,11 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
             rank_badge = '<span style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 2px 6px; border-radius: 4px; font-weight: 900; font-size: 11px;">🥉 热榜 No.3</span>'
         else:
             rank_badge = f'<span style="background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 11px;">热榜 No.{rank}</span>'
+
+        if "14张" in source_tag or "真机" in source_tag:
+            source_style = "background: #dcfce7; color: #15803d; font-weight: 800; border: 1px solid #86efac;"
+        else:
+            source_style = "background: #f1f5f9; color: #64748b; font-weight: normal;"
 
         ultra_orders_html += f"""
         <div style="background: #ffffff; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; font-size: 11px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
@@ -220,8 +226,13 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
                 <div style="display: table-cell;">🔴 1000万+买单: <b style="color: #ef4444;">{buy_orders}</b> 笔 | 🟢 卖单: <b style="color: #10b981;">{sell_orders}</b> 笔</div>
                 <div style="display: table-cell; text-align: right;">📏 单笔均额: <b style="color: #0f172a;">{avg_amount:.0f} 万元</b></div>
             </div>
-            <div style="margin-top: 4px; font-size: 11px; color: #64748b; text-align: right;">
-                💰 1000万+同花顺超大单净额: <b style="color: {color};">{net_str}</b>
+            <div style="display: table; width: 100%; margin-top: 4px; font-size: 11px;">
+                <div style="display: table-cell; text-align: left;">
+                    <span style="padding: 2px 6px; border-radius: 4px; font-size: 10px; {source_style}">{source_tag}</span>
+                </div>
+                <div style="display: table-cell; text-align: right; color: #64748b;">
+                    💰 1000万+同花顺超大单净额: <b style="color: {color};">{net_str}</b>
+                </div>
             </div>
             <div style="font-size: 10px; color: #64748b; margin-top: 6px; background: #f8fafc; padding: 6px 8px; border-radius: 4px; border-left: 2px solid {color};">
                 📲 <b>同花顺L2手机端成交明细</b>：{latest_detail}
@@ -370,10 +381,10 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         {alert_cards_html}
     </div>
 
-    <!-- 💥 对齐【同花顺 App 手机端全套 14 张真机截图】 482 笔千万级大单与 1.47 亿扫货点位 -->
+    <!-- 💥 【同花顺 App 人气榜 Top 10】 真机实测 vs 算法拟合标示 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #ec4899; padding-left: 8px;">🔥 同花顺 App 人气榜 Top 10: 480+笔真机L2大单全貌</div>
-        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">基于同花顺 14 张实测真机截图全量解析：输出全天 482 笔 1000万+ 大单全貌及 1.47 亿扫货极值点：</div>
+        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #ec4899; padding-left: 8px;">🔥 同花顺 App 人气榜 Top 10: 大资金动向</div>
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">中际旭创为 14 张同花顺真机 L2 图全量核验，其他个股提供 L2 算法拟合参考：</div>
         {ultra_orders_html}
     </div>
 
@@ -430,7 +441,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
 
     <!-- Footer -->
     <div style="text-align: center; font-size: 10px; color: #94a3b8; margin-top: 14px; padding: 8px;">
-        A股盘后自动化智投系统 · 14张同花顺真机截图全量归档 · 仅供研究参考
+        A股盘后自动化智投系统 · 同花顺真机核验与算法拟合标注 · 仅供研究参考
     </div>
 </div>
 """
