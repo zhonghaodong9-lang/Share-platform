@@ -16,7 +16,7 @@ def markdown_to_clean_html(text):
 
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
-    全新升级：包含【超级特大单个数(笔数)与平均大单金额】的 HTML 智投日报
+    全新升级：单笔 > 1000万元 超级大单全量捕获，包含大单笔数总数与平均金额监控
     """
     now = datetime.datetime.now()
     
@@ -180,7 +180,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 6. 超级特大单 (>5000万) 笔数与平均大单金额 HTML
+    # 6. 单笔 > 1000万元 超级大单笔数与平均大单金额 HTML
     ultra_orders_html = ""
     for uo in ultra_orders:
         stock = uo.get("stock")
@@ -199,11 +199,11 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
             <div style="display: table; width: 100%;">
                 <div style="display: table-cell; font-weight: 800; color: #0f172a; font-size: 12px;">{stock} <span style="color: #64748b; font-weight: normal;">({code})</span></div>
                 <div style="display: table-cell; text-align: center; font-weight: 800; color: {color};">{direction}</div>
-                <div style="display: table-cell; text-align: right; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">共 {order_count} 笔特大单</div>
+                <div style="display: table-cell; text-align: right; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">1000万+大单共 {order_count} 笔</div>
             </div>
             <div style="display: table; width: 100%; margin-top: 6px; font-size: 11px; color: #334155;">
                 <div style="display: table-cell;">📏 单笔平均金额: <b style="color: #0f172a;">{avg_amount:.0f} 万元</b></div>
-                <div style="display: table-cell; text-align: right;">💰 累计大单净额: <b style="color: {color};">{net_str}</b></div>
+                <div style="display: table-cell; text-align: right;">💰 1000万+大单累计净额: <b style="color: {color};">{net_str}</b></div>
             </div>
             <div style="font-size: 10px; color: #64748b; margin-top: 6px; background: #f8fafc; padding: 6px 8px; border-radius: 4px; border-left: 2px solid {color};">
                 ⏱️ <b>最新大单异动明细</b>：{latest_detail}
@@ -352,10 +352,10 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         {alert_cards_html}
     </div>
 
-    <!-- 💥 用户新增指定模块：【超级特大单 (>5000万) 笔数与平均大单金额监控】 -->
+    <!-- 💥 用户精确定制模块：【单笔 > 1000万 超级大单笔数与平均金额监控】 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #ec4899; padding-left: 8px;">💥 超级特大单 (>5000万) 笔数与平均金额监控</div>
-        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">统计个股出现的超级大单总笔数(个数)、单笔平均金额与累计净额：</div>
+        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #ec4899; padding-left: 8px;">💥 单笔 > 1000万 超级大单笔数与平均金额监控</div>
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">凡单笔成交金额 > 1000 万元均全量捕获，统计大单总笔数(个数)、单笔平均金额与累计净额：</div>
         {ultra_orders_html}
     </div>
 

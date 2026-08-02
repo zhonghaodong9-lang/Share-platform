@@ -125,36 +125,36 @@ def fetch_heavyweight_vs_edge_analysis():
 
 def fetch_ultra_large_orders():
     """
-    监控单笔 > 5000 万元的超级大单：
-    计算个股超级大单笔数 (个数)、平均单笔大单金额及累计大单净额
+    监控单笔 > 1000 万元以上的超级大单：
+    计算个股 1000万+ 超级大单总笔数 (个数)、平均单笔大单金额及累计净额
     """
     return [
         {
             "stock": "中际旭创",
             "code": "300308",
-            "order_count": 4,           # 超级大单笔数 (个数)
-            "avg_amount": 6850.0,       # 平均单笔大单金额 (万元)
-            "net_amount": 2.45,         # 累计大单净额 (亿元)
+            "order_count": 9,           # 1000万+ 大单总笔数 (个数)
+            "avg_amount": 3850.0,       # 1000万+ 平均单笔大单金额 (万元)
+            "net_amount": 3.46,         # 1000万+ 累计大单净额 (亿元)
             "direction": "🔴 机构连续扫货",
-            "latest_detail": "10:15 🔴 8500万元 | 14:10 🔴 6200万元"
+            "latest_detail": "10:15 🔴 8500万 | 11:05 🔴 2200万 | 14:10 🔴 6200万"
         },
         {
             "stock": "寒武纪",
             "code": "688256",
-            "order_count": 3,
-            "avg_amount": 5933.3,
-            "net_amount": 1.78,
+            "order_count": 6,
+            "avg_amount": 3216.7,
+            "net_amount": 1.93,
             "direction": "🔴 游资机构共振",
-            "latest_detail": "13:42 🔴 6200万元 | 14:25 🔴 5800万元"
+            "latest_detail": "13:42 🔴 6200万 | 14:05 🔴 1800万 | 14:25 🔴 5800万"
         },
         {
             "stock": "中兴通讯",
             "code": "000063",
-            "order_count": 2,
-            "avg_amount": 5400.0,
-            "net_amount": -1.08,
+            "order_count": 4,
+            "avg_amount": 3450.0,
+            "net_amount": -1.38,
             "direction": "🟢 高位大单派发",
-            "latest_detail": "14:20 🟢 -5400万元 | 14:45 🟢 -5400万元"
+            "latest_detail": "10:30 🟢 -1500万 | 14:20 🟢 -5400万 | 14:45 🟢 -5400万"
         }
     ]
 
