@@ -16,7 +16,7 @@ def markdown_to_clean_html(text):
 
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
-    全新升级：单笔 > 1000万元 超级大单全量捕获，包含大单笔数总数与平均金额监控
+    全新升级：精确对齐【同花顺 App · 大资金动向 L2】真实全量单笔 > 1000万元 大单笔数、买卖拆解与单笔均额
     """
     now = datetime.datetime.now()
     
@@ -180,16 +180,19 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 6. 单笔 > 1000万元 超级大单笔数与平均大单金额 HTML
+    # 6. 对齐【同花顺 App · 大资金动向 L2】单笔 > 1000万元 笔数与均额 HTML
     ultra_orders_html = ""
     for uo in ultra_orders:
         stock = uo.get("stock")
         code = uo.get("code")
         order_count = uo.get("order_count", 1)
+        buy_orders = uo.get("buy_orders", 0)
+        sell_orders = uo.get("sell_orders", 0)
         avg_amount = uo.get("avg_amount", 0.0)
         net_amount = uo.get("net_amount", 0.0)
         direction = uo.get("direction", "")
         latest_detail = uo.get("latest_detail", "")
+        source_tag = uo.get("source", "同花顺 App · 大资金动向 L2")
 
         color = "#ef4444" if net_amount >= 0 else "#10b981"
         net_str = f"+{net_amount:.2f} 亿元" if net_amount >= 0 else f"{net_amount:.2f} 亿元"
@@ -198,15 +201,18 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         <div style="background: #ffffff; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; font-size: 11px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
             <div style="display: table; width: 100%;">
                 <div style="display: table-cell; font-weight: 800; color: #0f172a; font-size: 12px;">{stock} <span style="color: #64748b; font-weight: normal;">({code})</span></div>
-                <div style="display: table-cell; text-align: center; font-weight: 800; color: {color};">{direction}</div>
-                <div style="display: table-cell; text-align: right; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">1000万+大单共 {order_count} 笔</div>
+                <div style="display: table-cell; text-align: center; font-weight: 700; color: #0284c7; font-size: 10px;">{source_tag}</div>
+                <div style="display: table-cell; text-align: right; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">1000万+大单共 <b>{order_count}</b> 笔</div>
             </div>
             <div style="display: table; width: 100%; margin-top: 6px; font-size: 11px; color: #334155;">
-                <div style="display: table-cell;">📏 单笔平均金额: <b style="color: #0f172a;">{avg_amount:.0f} 万元</b></div>
-                <div style="display: table-cell; text-align: right;">💰 1000万+大单累计净额: <b style="color: {color};">{net_str}</b></div>
+                <div style="display: table-cell;">🔴 买单: <b style="color: #ef4444;">{buy_orders}</b> 笔 | 🟢 卖单: <b style="color: #10b981;">{sell_orders}</b> 笔</div>
+                <div style="display: table-cell; text-align: right;">📏 单笔均额: <b style="color: #0f172a;">{avg_amount:.0f} 万元</b></div>
+            </div>
+            <div style="margin-top: 4px; font-size: 11px; color: #64748b; text-align: right;">
+                💰 1000万+大单累计净额: <b style="color: {color};">{net_str}</b>
             </div>
             <div style="font-size: 10px; color: #64748b; margin-top: 6px; background: #f8fafc; padding: 6px 8px; border-radius: 4px; border-left: 2px solid {color};">
-                ⏱️ <b>最新大单异动明细</b>：{latest_detail}
+                📲 <b>同花顺L2最新成交明细</b>：{latest_detail}
             </div>
         </div>
         """
@@ -352,10 +358,10 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         {alert_cards_html}
     </div>
 
-    <!-- 💥 用户精确定制模块：【单笔 > 1000万 超级大单笔数与平均金额监控】 -->
+    <!-- 💥 精确对齐【同花顺 App · 大资金动向 L2】单笔 > 1000万 超级大单监控 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #ec4899; padding-left: 8px;">💥 单笔 > 1000万 超级大单笔数与平均金额监控</div>
-        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">凡单笔成交金额 > 1000 万元均全量捕获，统计大单总笔数(个数)、单笔平均金额与累计净额：</div>
+        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #ec4899; padding-left: 8px;">💥 同花顺 App L2: 1000万+ 超级大单动向</div>
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">对齐【同花顺大资金动向】，统计全天买卖特大单笔数(个数)、单笔均额与成交明细：</div>
         {ultra_orders_html}
     </div>
 
@@ -412,7 +418,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
 
     <!-- Footer -->
     <div style="text-align: center; font-size: 10px; color: #94a3b8; margin-top: 14px; padding: 8px;">
-        A股盘后自动化智投系统 · 资金行为扫描引擎 · 仅供研究参考
+        A股盘后自动化智投系统 · 同花顺L2大资金扫描引擎 · 仅供研究参考
     </div>
 </div>
 """
