@@ -24,9 +24,7 @@ def push_to_feishu(content_md, title="A股盘后智投与复盘日报"):
                 ]
             }
         }
-        s = requests.Session()
-        s.trust_env = False
-        resp = s.post(Config.FEISHU_WEBHOOK, json=payload, timeout=10)
+        resp = requests.post(Config.FEISHU_WEBHOOK, json=payload, timeout=10)
         if resp.status_code == 200:
             logging.info("飞书推送成功！")
             return True
@@ -46,9 +44,7 @@ def push_to_dingtalk(content_md, title="A股盘后智投与复盘日报"):
                 "text": f"### {title}\n\n{content_md}"
             }
         }
-        s = requests.Session()
-        s.trust_env = False
-        resp = s.post(Config.DINGTALK_WEBHOOK, json=payload, timeout=10)
+        resp = requests.post(Config.DINGTALK_WEBHOOK, json=payload, timeout=10)
         if resp.status_code == 200:
             logging.info("钉钉推送成功！")
             return True
@@ -67,9 +63,7 @@ def push_to_wecom(content_md, title="A股盘后智投与复盘日报"):
                 "content": content_md
             }
         }
-        s = requests.Session()
-        s.trust_env = False
-        resp = s.post(Config.WECOM_WEBHOOK, json=payload, timeout=10)
+        resp = requests.post(Config.WECOM_WEBHOOK, json=payload, timeout=10)
         if resp.status_code == 200:
             logging.info("企业微信推送成功！")
             return True
@@ -81,27 +75,38 @@ def push_to_wxpusher(content_md, title="A股盘后智投与复盘日报"):
     """推送至 WxPusher 微信推送平台"""
     if not Config.WXPUSHER_APP_TOKEN:
         return False
-    try:
-        uids = [u.strip() for u in Config.WXPUSHER_UIDS.split(",") if u.strip()] if Config.WXPUSHER_UIDS else []
-        payload = {
-            "appToken": Config.WXPUSHER_APP_TOKEN,
-            "content": content_md,
-            "summary": title,
-            "contentType": 2,  # 2 表示 Markdown 格式
-        }
-        if uids:
-            payload["uids"] = uids
+    
+    uids = [u.strip() for u in Config.WXPUSHER_UIDS.split(",") if u.strip()] if Config.WXPUSHER_UIDS else []
+    payload = {
+        "appToken": Config.WXPUSHER_APP_TOKEN,
+        "content": content_md,
+        "summary": title,
+        "contentType": 2,  # 2 表示 Markdown 格式
+    }
+    if uids:
+        payload["uids"] = uids
 
-        url = "https://wxpusher.zhengxianliang.com/api/send/message"
-        s = requests.Session()
-        s.trust_env = False
-        resp = s.post(url, json=payload, timeout=10)
-        if resp.status_code == 200:
-            res_json = resp.json()
-            logging.info(f"WxPusher 微信推送结果: {res_json.get('msg', '成功')}")
-            return True
-    except Exception as e:
-        logging.warning(f"WxPusher 微信推送结果: {e}")
+    urls = [
+        "https://wxpusher.com/api/send/message",
+        "https://wxpusher.zhengxianliang.com/api/send/message",
+    ]
+
+    for url in urls:
+        try:
+            resp = requests.post(url, json=payload, timeout=10)
+            if resp.status_code == 200:
+                res_json = resp.json()
+                code = res_json.get("code")
+                msg = res_json.get("msg")
+                logging.info(f"WxPusher 微信推送结果: code={code}, msg={msg}")
+                if code == 1000:
+                    logging.info("✅ WxPusher 微信推送成功！")
+                    return True
+                else:
+                    logging.warning(f"⚠️ WxPusher 微信推送响应非1000: {msg}")
+        except Exception as e:
+            logging.warning(f"WxPusher 尝试请求 {url} 失败: {e}")
+
     return False
 
 def push_to_serverchan(content_md, title="A股盘后智投与复盘日报"):
@@ -114,9 +119,7 @@ def push_to_serverchan(content_md, title="A股盘后智投与复盘日报"):
             "title": title,
             "desp": content_md
         }
-        s = requests.Session()
-        s.trust_env = False
-        resp = s.post(url, data=payload, timeout=10)
+        resp = requests.post(url, data=payload, timeout=10)
         if resp.status_code == 200:
             logging.info("Server酱 微信推送成功！")
             return True
