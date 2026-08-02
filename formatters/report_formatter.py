@@ -20,19 +20,27 @@ def markdown_to_clean_html(text):
 
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
-    将全量盘后/午间数据渲染为严谨、权威、符合对冲基金研报标准的高颜值 HTML 智投日报
+    将全量盘后数据渲染为严谨、权威、符合用户精确要求的 HTML 智投日报
     """
     now = datetime.datetime.now()
-    today_str = now.strftime("%Y年%m月%d日")
-    time_str = now.strftime("%H:%M")
     
-    # 自动识别午评还是终盘盘后
-    if 11 <= now.hour < 14 or (now.hour == 14 and now.minute < 30):
-        report_title = "📈 A股午间深度智投行情 (午评)"
-        time_tag = "☀️ 午间收盘"
+    # 提取真实交易日日期（如 7月31日 / 2026年07月31日）
+    raw_trade_date = market_data.get("trade_date", "")
+    if raw_trade_date and len(raw_trade_date) == 8:
+        try:
+            dt = datetime.datetime.strptime(raw_trade_date, "%Y%m%d")
+            trade_date_str = dt.strftime("%Y年%m月%d日")
+            month_day_str = f"{dt.month}月{dt.day}日"
+        except Exception:
+            trade_date_str = now.strftime("%Y年%m月%d日")
+            month_day_str = f"{now.month}月{now.day}日"
     else:
-        report_title = "📈 A股盘后深度智投日报 (终盘)"
-        time_tag = "🌙 盘后终盘"
+        trade_date_str = now.strftime("%Y年%m月%d日")
+        month_day_str = f"{now.month}月{now.day}日"
+
+    # 按用户指令格式化标题与状态
+    report_title = f"📈 A股{month_day_str}市场智能复盘报告"
+    time_tag = "🌙 15:00全天收盘"
 
     indexes = market_data.get("indexes", [])
     stats = market_data.get("stats", {})
@@ -149,16 +157,19 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
 
     score = sentiment.get("score", 63.1)
     vol_diff = stats.get("volume_diff", 1250.5)
-    vol_diff_pct = stats.get("volume_diff_pct", 7.38)
     vol_diff_flag = "🔴 放量" if vol_diff >= 0 else "🟢 缩量"
 
     html = f"""
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 12px; border-radius: 14px; box-sizing: border-box; max-width: 600px; margin: 0 auto;">
     
-    <!-- 顶部 Banner 区域 -->
+    <!-- 顶部 Banner 区域（遵循用户精确 UI 指令） -->
     <div style="background: linear-gradient(135deg, #0f172a, #1e293b); color: #ffffff; padding: 18px 16px; border-radius: 12px; text-align: center; box-shadow: 0 4px 10px rgba(15,23,42,0.25);">
         <div style="font-size: 21px; font-weight: 900; letter-spacing: 0.5px; color: #ffffff;">{report_title}</div>
-        <div style="font-size: 12px; color: #94a3b8; margin-top: 6px;">📅 {today_str} | ⏰ {time_str} | <span style="background:#0284c7; color:#fff; padding:2px 6px; border-radius:4px;">{time_tag}</span></div>
+        <div style="font-size: 12px; color: #94a3b8; margin-top: 8px; display: flex; justify-content: center; align-items: center;">
+            <span>📅 {trade_date_str}</span>
+            <span style="margin: 0 8px;">|</span>
+            <span style="background:#0284c7; color:#ffffff; padding:2px 8px; border-radius:4px; font-weight:700;">{time_tag}</span>
+        </div>
     </div>
 
     <!-- 市场短线仪表盘卡片 -->
@@ -198,7 +209,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
 
         <div style="font-size: 11px; color: #334155; background: #fff7ed; padding: 10px; border-radius: 8px; margin-top: 8px; border-left: 3px solid #f97316;">
-            💡 <b>操盘提醒</b>：{clean_advice}
+            💡 <b>操盘策略</b>：{clean_advice}
         </div>
     </div>
 
@@ -253,7 +264,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         {ladder_html}
     </div>
 
-    <!-- 首席智投策略建议 (完美渲染无源码外露) -->
+    <!-- 首席智投策略建议 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
         <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #8b5cf6; padding-left: 8px;">🤖 首席智投策略总结</div>
         <div style="font-size: 12px; color: #334155; line-height: 1.7; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
