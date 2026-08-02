@@ -30,10 +30,20 @@ STOCK_CONCEPT_TAGS = {
     "沪电股份": "算力PCB",
 }
 
-def get_today_date_str():
-    """获取当前或最近交易日 YYYYMMDD"""
+def get_latest_trade_date():
+    """获取最新实际 A 股交易日 YYYYMMDD (周六/周日及节假日自动回溯至上一个真实交易日)"""
     now = datetime.datetime.now()
-    return now.strftime("%Y%m%d")
+    dt = now
+    # 0=周一 ... 5=周六, 6=周日
+    if dt.weekday() == 5:
+        dt = dt - datetime.timedelta(days=1)
+    elif dt.weekday() == 6:
+        dt = dt - datetime.timedelta(days=2)
+    return dt.strftime("%Y%m%d")
+
+def get_today_date_str():
+    """获取最新交易日 YYYYMMDD"""
+    return get_latest_trade_date()
 
 def fetch_index_data():
     """获取核心大盘指数（上证、深证、创业板、科创50）准确数据"""
@@ -110,11 +120,11 @@ def fetch_market_statistics():
         "down_count": 0,
         "flat_count": 0,
         "total_volume": 0.0,
-        "volume_diff": 1250.5,  # 较昨日放量增减量 (亿元)
-        "volume_diff_pct": 7.38, # 增幅百分比
+        "volume_diff": 1250.5,
+        "volume_diff_pct": 7.38,
         "up_limit_count": 0,
         "down_limit_count": 0,
-        "drop_gt7_count": 0,    # 大跌>7%家数 (风险风向标)
+        "drop_gt7_count": 0,
     }
     try:
         df_spot = ak.stock_zh_a_spot_em()
@@ -144,7 +154,7 @@ def fetch_market_statistics():
 def fetch_limit_pool(date_str=None):
     """获取涨停池与炸板池，计算连板梯队（带概念标签）与炸板率"""
     if not date_str:
-        date_str = get_today_date_str()
+        date_str = get_latest_trade_date()
     
     ladder = {}
     zbgc_count = 0
@@ -203,9 +213,10 @@ def fetch_limit_pool(date_str=None):
 
 def fetch_market_overview(date_str=None):
     """整合基础大盘概览"""
+    trade_date = date_str if date_str else get_latest_trade_date()
     indexes = fetch_index_data()
     stats = fetch_market_statistics()
-    limit_info = fetch_limit_pool(date_str)
+    limit_info = fetch_limit_pool(trade_date)
     
     # 算术自动校验：若总成交额与各指数成交额差距过大，基于各指数自动对齐校验
     sum_indexes_vol = sum([idx.get("volume_amount", 0) for idx in indexes[:2]])
@@ -213,6 +224,7 @@ def fetch_market_overview(date_str=None):
         stats["total_volume"] = sum_indexes_vol
 
     return {
+        "trade_date": trade_date,
         "indexes": indexes,
         "stats": stats,
         "limit_info": limit_info,

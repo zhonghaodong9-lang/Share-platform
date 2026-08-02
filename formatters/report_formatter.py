@@ -21,24 +21,35 @@ def markdown_to_clean_html(text):
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
     将全量盘后数据渲染为严谨、权威、符合用户精确要求的 HTML 智投日报
+    自动纠正周末/非交易日为真实交易日 (如 7月31日)
     """
     now = datetime.datetime.now()
     
-    # 提取真实交易日日期（如 7月31日 / 2026年07月31日）
+    # 提取真实交易日日期（周末自动回溯为上周五，如 7月31日 / 2026年07月31日）
     raw_trade_date = market_data.get("trade_date", "")
-    if raw_trade_date and len(raw_trade_date) == 8:
+    if not raw_trade_date:
+        dt = now
+        if dt.weekday() == 5:
+            dt = dt - datetime.timedelta(days=1)
+        elif dt.weekday() == 6:
+            dt = dt - datetime.timedelta(days=2)
+        trade_date_str = dt.strftime("%Y年%m月%d日")
+        month_day_str = f"{dt.month}月{dt.day}日"
+    else:
         try:
             dt = datetime.datetime.strptime(raw_trade_date, "%Y%m%d")
             trade_date_str = dt.strftime("%Y年%m月%d日")
             month_day_str = f"{dt.month}月{dt.day}日"
         except Exception:
-            trade_date_str = now.strftime("%Y年%m月%d日")
-            month_day_str = f"{now.month}月{now.day}日"
-    else:
-        trade_date_str = now.strftime("%Y年%m月%d日")
-        month_day_str = f"{now.month}月{now.day}日"
+            dt = now
+            if dt.weekday() == 5:
+                dt = dt - datetime.timedelta(days=1)
+            elif dt.weekday() == 6:
+                dt = dt - datetime.timedelta(days=2)
+            trade_date_str = dt.strftime("%Y年%m月%d日")
+            month_day_str = f"{dt.month}月{dt.day}日"
 
-    # 按用户指令格式化标题与状态
+    # 按用户指令精确定制标题与状态
     report_title = f"📈 A股{month_day_str}市场智能复盘报告"
     time_tag = "🌙 15:00全天收盘"
 
@@ -85,7 +96,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 3. 领跌板块 HTML Cards (补充风险维度)
+    # 3. 领跌板块 HTML Cards
     sector_outflow_html = ""
     for i, sec in enumerate(sector_outflow[:3], 1):
         chg = sec.get("change_rate", 0.0)
@@ -162,7 +173,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
     html = f"""
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; padding: 12px; border-radius: 14px; box-sizing: border-box; max-width: 600px; margin: 0 auto;">
     
-    <!-- 顶部 Banner 区域（遵循用户精确 UI 指令） -->
+    <!-- 顶部 Banner 区域（遵循用户精确 UI 指令，交易日对齐如 7月31日） -->
     <div style="background: linear-gradient(135deg, #0f172a, #1e293b); color: #ffffff; padding: 18px 16px; border-radius: 12px; text-align: center; box-shadow: 0 4px 10px rgba(15,23,42,0.25);">
         <div style="font-size: 21px; font-weight: 900; letter-spacing: 0.5px; color: #ffffff;">{report_title}</div>
         <div style="font-size: 12px; color: #94a3b8; margin-top: 8px; display: flex; justify-content: center; align-items: center;">
