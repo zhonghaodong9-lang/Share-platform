@@ -132,17 +132,16 @@ def fetch_ultra_large_orders():
     try:
         # 尝试调用东方财富全市场个股资金流向 API
         df_ff = ak.stock_fund_flow_individual(symbol="即时")
-        if not df_ff.empty:
-            # 筛选超大单净流入或成交靠前的核心标的
+        if not df_ff.empty and "超大单净流入-净额" in df_ff.columns:
             df_ff["超大单净额_数值"] = pd.to_numeric(df_ff["超大单净流入-净额"], errors="coerce")
             top_stocks = df_ff.sort_values(by="超大单净额_数值", ascending=False).head(5)
             
             for _, row in top_stocks.iterrows():
                 code = str(row.get("股票代码", ""))
                 name = str(row.get("股票简称", ""))
-                super_net = float(row.get("超大单净额_数值", 0)) / 1e8
+                super_net_raw = float(row.get("超大单净额_数值", 0))
+                super_net = super_net_raw / 1e8
                 
-                # 基于东财/同花顺大单特征统计笔数与均额
                 if super_net > 0:
                     order_count = max(4, int(super_net * 2.5) + 3)
                     avg_amount = round((super_net * 1e4) / order_count, 1)
