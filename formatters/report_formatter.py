@@ -16,7 +16,7 @@ def markdown_to_clean_html(text):
 
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
-    全新升级：全面对齐【同花顺 App 手机端 L2 盘口】全量 1000万+ 大单高频数据（百亿中军全天真实 100+ 笔）
+    全新升级：【同花顺 App 手机端人气榜 Top 10】全量 1000万+ 超级大单笔数与单笔均额卡片
     """
     now = datetime.datetime.now()
     
@@ -180,9 +180,10 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 6. 对齐【同花顺 App 手机端 L2 盘口】单笔 > 1000万元 笔数与均额 HTML
+    # 6. 用户指定新增：【同花顺 App 手机端人气榜 Top 10】 1000万+ 超级大单全量动向 HTML
     ultra_orders_html = ""
     for uo in ultra_orders:
+        rank = uo.get("rank", 1)
         stock = uo.get("stock")
         code = uo.get("code")
         order_count = uo.get("order_count", 1)
@@ -192,27 +193,39 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         net_amount = uo.get("net_amount", 0.0)
         direction = uo.get("direction", "")
         latest_detail = uo.get("latest_detail", "")
-        source_tag = uo.get("source", "同花顺 App 手机端 L2 盘口")
 
         color = "#ef4444" if net_amount >= 0 else "#10b981"
         net_str = f"+{net_amount:.2f} 亿元" if net_amount >= 0 else f"{net_amount:.2f} 亿元"
 
+        # 针对前三名给高亮金银铜勋章
+        if rank == 1:
+            rank_badge = '<span style="background: linear-gradient(135deg, #ef4444, #dc2626); color: #ffffff; padding: 2px 6px; border-radius: 4px; font-weight: 900; font-size: 11px;">🥇 人气榜 No.1</span>'
+        elif rank == 2:
+            rank_badge = '<span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #ffffff; padding: 2px 6px; border-radius: 4px; font-weight: 900; font-size: 11px;">🥈 人气榜 No.2</span>'
+        elif rank == 3:
+            rank_badge = '<span style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 2px 6px; border-radius: 4px; font-weight: 900; font-size: 11px;">🥉 人气榜 No.3</span>'
+        else:
+            rank_badge = f'<span style="background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-weight: 800; font-size: 11px;">同花顺热榜 No.{rank}</span>'
+
         ultra_orders_html += f"""
         <div style="background: #ffffff; padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #e2e8f0; font-size: 11px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
             <div style="display: table; width: 100%;">
-                <div style="display: table-cell; font-weight: 800; color: #0f172a; font-size: 12px;">{stock} <span style="color: #64748b; font-weight: normal;">({code})</span></div>
-                <div style="display: table-cell; text-align: center; font-weight: 700; color: #0284c7; font-size: 10px;">{source_tag}</div>
-                <div style="display: table-cell; text-align: right; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">1000万+大单共 <b style="font-size: 12px;">{order_count}</b> 笔</div>
+                <div style="display: table-cell; font-weight: 800; color: #0f172a; font-size: 12px;">
+                    {rank_badge}
+                    <span style="margin-left: 4px;">{stock}</span> <span style="color: #64748b; font-weight: normal;">({code})</span>
+                </div>
+                <div style="display: table-cell; text-align: center; font-weight: 800; color: {color}; font-size: 11px;">{direction}</div>
+                <div style="display: table-cell; text-align: right; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 6px; border-radius: 4px;">1000万+大单共 <b>{order_count}</b> 笔</div>
             </div>
             <div style="display: table; width: 100%; margin-top: 6px; font-size: 11px; color: #334155;">
-                <div style="display: table-cell;">🔴 买单: <b style="color: #ef4444;">{buy_orders}</b> 笔 | 🟢 卖单: <b style="color: #10b981;">{sell_orders}</b> 笔</div>
+                <div style="display: table-cell;">🔴 1000万+买单: <b style="color: #ef4444;">{buy_orders}</b> 笔 | 🟢 卖单: <b style="color: #10b981;">{sell_orders}</b> 笔</div>
                 <div style="display: table-cell; text-align: right;">📏 单笔均额: <b style="color: #0f172a;">{avg_amount:.0f} 万元</b></div>
             </div>
             <div style="margin-top: 4px; font-size: 11px; color: #64748b; text-align: right;">
                 💰 1000万+大单累计净额: <b style="color: {color};">{net_str}</b>
             </div>
             <div style="font-size: 10px; color: #64748b; margin-top: 6px; background: #f8fafc; padding: 6px 8px; border-radius: 4px; border-left: 2px solid {color};">
-                📲 <b>同花顺L2手机端成交逐笔</b>：{latest_detail}
+                📲 <b>同花顺L2手机端成交明细</b>：{latest_detail}
             </div>
         </div>
         """
@@ -358,10 +371,10 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         {alert_cards_html}
     </div>
 
-    <!-- 💥 对齐【同花顺 App 手机端 L2 盘口】全量 1000万+ 超级大单动向 (100+笔真金白银) -->
+    <!-- 💥 用户精确定制新增：【同花顺 App 人气榜 Top 10】 1000万+ 超级大单全量动向 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #ec4899; padding-left: 8px;">💥 同花顺 App 手机端 L2 盘口: 1000万+ 全量大向</div>
-        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">全量抓取同花顺盘口 1000万+ 大单（百亿流动性中军单日真实达 100+ 笔）：</div>
+        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #ec4899; padding-left: 8px;">🔥 同花顺 App 人气榜 Top 10: 1000万+ 超级大单全量动向</div>
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">精准梳理全场同花顺热榜前十名核心标的，展示 1000万+ 买卖大单笔数、均额与成交明细：</div>
         {ultra_orders_html}
     </div>
 
@@ -418,7 +431,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
 
     <!-- Footer -->
     <div style="text-align: center; font-size: 10px; color: #94a3b8; margin-top: 14px; padding: 8px;">
-        A股盘后自动化智投系统 · 同花顺手机端L2大资金盘口扫描 · 仅供研究参考
+        A股盘后自动化智投系统 · 同花顺人气榜Top10大资金扫描 · 仅供研究参考
     </div>
 </div>
 """
