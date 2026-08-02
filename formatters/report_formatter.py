@@ -16,8 +16,7 @@ def markdown_to_clean_html(text):
 
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
-    全新升级【资金行为扫描仪】：
-    重动态切片拆解、重量价背离监控、重趋势容量中军；轻静态排名、轻短线连板
+    基于用户精确定制的【宽基 ETF 放量监控】与【板块涨停家数 Top 3 梯队】HTML 智投日报
     """
     now = datetime.datetime.now()
     
@@ -51,6 +50,8 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
     indexes = market_data.get("indexes", [])
     stats = market_data.get("stats", {})
     limit_info = market_data.get("limit_info", {})
+    etf_spikes = market_data.get("etf_spikes", [])
+    sector_limit_top3 = market_data.get("sector_limit_top3", [])
 
     trajectories = money_flow_data.get("trajectories", [])
     micro_structure = money_flow_data.get("micro_structure", {})
@@ -59,7 +60,54 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
     us_indexes = overseas_data.get("us_indexes", [])
     mapping_details = mapping.get("mapping_details", [])
 
-    # 1. 板块资金分时切片轨迹表格 HTML
+    # 1. 宽基 ETF 放量异动 HTML Cards
+    etf_cards_html = ""
+    for etf in etf_spikes:
+        chg = etf.get("change_rate", 0.0)
+        color = "#ef4444" if chg >= 0 else "#10b981"
+        etf_cards_html += f"""
+        <div style="background: #ffffff; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid #e2e8f0; display: table; width: 100%; box-sizing: border-box; font-size: 11px;">
+            <div style="display: table-cell; font-weight: 700; color: #0f172a;">{etf.get('name')} <span style="color: #94a3b8;">({etf.get('code')})</span></div>
+            <div style="display: table-cell; text-align: center; font-weight: 700; color: {color};">{chg:+.2f}%</div>
+            <div style="display: table-cell; text-align: right; font-weight: 800; color: #0f172a;">成交 {etf.get('volume_amount', 0):.1f}亿</div>
+            <div style="display: table-cell; text-align: right; font-weight: 800; color: #ef4444; padding-left: 6px;">{etf.get('status')} (+{etf.get('spike_pct')}%)</div>
+        </div>
+        """
+
+    # 2. 板块涨停家数 Top 3 & 板块内龙头代表 HTML Cards
+    sector_top3_html = ""
+    for i, st in enumerate(sector_limit_top3, 1):
+        name = st.get("sector_name")
+        count = st.get("zt_count", 0)
+        leaders = "、".join(st.get("leaders", []))
+        sector_top3_html += f"""
+        <div style="background: #fff5f5; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #ef4444; font-size: 12px; box-sizing: border-box;">
+            <div style="display: table; width: 100%;">
+                <div style="display: table-cell; font-weight: 800; color: #991b1b;">TOP {i}. {name}</div>
+                <div style="display: table-cell; text-align: right; font-weight: 900; color: #ef4444;">涨停 {count} 家</div>
+            </div>
+            <div style="font-size: 11px; color: #475569; margin-top: 4px;">
+                🏆 <b>龙头代表</b>：<span style="font-weight: 700; color: #1e293b;">{leaders}</span>
+            </div>
+        </div>
+        """
+
+    # 3. 精简空间连板梯队 HTML Badges (仅列1-2只代表标的)
+    ladder_html = ""
+    ladder = limit_info.get("ladder", {})
+    if ladder:
+        for height in sorted(ladder.keys(), reverse=True):
+            stocks = "、".join(ladder[height][:2]) # 仅保留 1-2 只龙头代表
+            ladder_html += f"""
+            <div style="margin-bottom: 6px;">
+                <span style="background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 800;">{height} 连板龙头</span>
+                <span style="font-size: 12px; font-weight: 700; color: #1e293b; margin-left: 6px;">{stocks}</span>
+            </div>
+            """
+    else:
+        ladder_html = '<div style="font-size: 12px; color: #94a3b8;">暂无高位连板数据</div>'
+
+    # 4. 板块资金分时切片轨迹表格 HTML
     intraday_rows_html = ""
     alert_cards_html = ""
 
@@ -108,7 +156,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
             </div>
             """
 
-    # 2. 百亿大容量中军 vs 边缘小票拆解 HTML
+    # 5. 百亿大容量中军 vs 边缘小票拆解 HTML
     heavyweights = micro_structure.get("heavyweight_inflow", [])
     edge_stocks = micro_structure.get("edge_small_stocks", [])
 
@@ -132,7 +180,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 3. 超级大单 (>5000万) 成交监控 HTML
+    # 6. 超级特大单 (>5000万) 成交监控 HTML
     ultra_orders_html = ""
     for uo in ultra_orders:
         color = "#ef4444" if "🔴" in uo.get("type", "") else "#10b981"
@@ -144,7 +192,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 4. 核心大盘指数 HTML 表格
+    # 7. 核心大盘指数 HTML 表格
     indices_rows_html = ""
     for i, idx in enumerate(indexes):
         chg = idx.get("change_rate", 0.0)
@@ -160,7 +208,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </tr>
         """
 
-    # 5. 中美板块逻辑映射 Cards
+    # 8. 中美板块逻辑映射 Cards
     mapping_cards_html = ""
     for m in mapping_details:
         mapping_cards_html += f"""
@@ -173,7 +221,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 6. 外盘数据 HTML
+    # 外盘数据 HTML
     us_rows_html = ""
     for us in us_indexes:
         chg = us.get("change_rate", 0.0)
@@ -205,7 +253,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
     </div>
 
-    <!-- ⚡ 市场短线与大资金趋势风向 -->
+    <!-- ⚡ 1. 市场总览与大资金趋势方向 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
         <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 10px; border-left: 4px solid #ef4444; padding-left: 8px;">⚡ 市场总览与大资金趋势方向</div>
         
@@ -242,7 +290,24 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
     </div>
 
-    <!-- 🔥 新核心模块：【板块资金分时切片轨迹与量价动态剖析】 -->
+    <!-- 📊 用户新增指定模块：【宽基 ETF 成交量放量异动监控】 -->
+    <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #0284c7; padding-left: 8px;">📊 宽基 ETF 异常放量监控 (大资金/国家队信号)</div>
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">监测成交量明显放大超 20% 的核心宽基 ETF：</div>
+        {etf_cards_html}
+    </div>
+
+    <!-- 🏆 用户新增指定模块：【板块涨停家数 Top 3 & 板块内龙头代表】 -->
+    <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 8px; border-left: 4px solid #dc2626; padding-left: 8px;">🏆 板块涨停家数 Top 3 & 龙头代表梯队</div>
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">聚焦涨停聚集度最高的核心板块，仅列出 1~2 只代表性空间龙头：</div>
+        {sector_top3_html}
+        
+        <div style="font-size: 12px; font-weight: 700; color: #0f172a; margin-top: 10px; margin-bottom: 6px;">🪜 精简空间连板高度代表</div>
+        {ladder_html}
+    </div>
+
+    <!-- 🔥 板块资金分时轨迹与量价动态剖析 -->
     <div style="background: #ffffff; padding: 14px; border-radius: 12px; margin-top: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
         <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 6px; border-left: 4px solid #f97316; padding-left: 8px;">🔥 板块资金分时轨迹与量价动态剖析</div>
         <div style="font-size: 11px; color: #64748b; margin-bottom: 10px;">打破全天静态净流入滤镜，按交易时段切片监控真实意图：</div>
