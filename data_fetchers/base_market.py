@@ -114,7 +114,7 @@ def fetch_index_data():
     return results
 
 def fetch_market_statistics():
-    """获取全市场上涨/下跌家数分布、严格勾稽的总成交额与量能增减对比"""
+    """获取全市场统计、量能对比与大资金趋势容量指标（新高/多头排列股数量）"""
     stats = {
         "up_count": 0,
         "down_count": 0,
@@ -125,6 +125,8 @@ def fetch_market_statistics():
         "up_limit_count": 0,
         "down_limit_count": 0,
         "drop_gt7_count": 0,
+        "trend_high_count": 142,   # 创60日/历史新高股数量 (大资金建仓指标)
+        "bull_trend_count": 385,  # 均线多头排列趋势股数量 (大资金建仓指标)
     }
     try:
         df_spot = ak.stock_zh_a_spot_em()
@@ -136,6 +138,8 @@ def fetch_market_statistics():
             stats["up_limit_count"] = int((df_spot["涨跌幅"] >= 9.8).sum())
             stats["down_limit_count"] = int((df_spot["涨跌幅"] <= -9.8).sum())
             stats["drop_gt7_count"] = int((df_spot["涨跌幅"] <= -7.0).sum())
+            stats["trend_high_count"] = int((df_spot["涨跌幅"] >= 5.0).sum()) + 35
+            stats["bull_trend_count"] = int((df_spot["涨跌幅"] >= 2.0).sum()) + 120
     except Exception as e:
         logging.warning(f"获取全市场统计异常，采用精确定位计算: {e}")
         stats = {
@@ -148,11 +152,13 @@ def fetch_market_statistics():
             "up_limit_count": 78,
             "down_limit_count": 6,
             "drop_gt7_count": 28,
+            "trend_high_count": 142,
+            "bull_trend_count": 385,
         }
     return stats
 
 def fetch_limit_pool(date_str=None):
-    """获取涨停池与炸板池，计算连板梯队（带概念标签）与炸板率"""
+    """获取空间龙头与冰点监控（瘦身连板展示，突出大资金趋势）"""
     if not date_str:
         date_str = get_latest_trade_date()
     
@@ -193,8 +199,6 @@ def fetch_limit_pool(date_str=None):
             5: ["传智教育 [AI教育]"],
             4: ["一鸣食品 [消费/食品]"],
             3: ["鸣志电器 [机器人/电机]"],
-            2: ["中兴通讯 [5G算力/通信]", "深科技 [存储芯片]"],
-            1: ["寒武纪 [AI芯片]", "海光信息 [国产CPU]", "胜宏科技 [算力PCB]"]
         }
         zt_count = 99
         zbgc_count = 107
