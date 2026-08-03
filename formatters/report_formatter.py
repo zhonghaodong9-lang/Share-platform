@@ -12,8 +12,8 @@ def markdown_to_clean_html(text):
 
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
-    全新移动端极简高能版：彻底解决微信 View 挤压、换行错位与 WxPusher 水印遮挡 Bug
-    100% 东方财富网直连数据源
+    用户专属 4 大核心数据模块排版 (100% 东方财富网直连数据源)
+    精简高能，彻底防止 WxPusher 文本超长截断，确保 100% 完整显示第四模块 10 大成交额个股。
     """
     now = datetime.datetime.now()
     raw_trade_date = market_data.get("trade_date", "")
@@ -42,7 +42,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
     hot_sectors = market_data.get("hot_sectors", [])
     top10_turnover = market_data.get("top10_turnover_stocks", [])
 
-    # 1. 五大指数行 HTML (手机屏优化)
+    # 1. 模块一：五大指数 HTML
     indexes_rows_html = ""
     for idx in indexes:
         chg = idx.get("change_rate", 0.0)
@@ -57,7 +57,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </tr>
         """
 
-    # 2. 6 大指定 ETF HTML (手机屏卡片)
+    # 2. 模块二：指定 6 大 ETF HTML
     etf_rows_html = ""
     for etf in target_etfs:
         chg = etf.get("change_rate", 0.0)
@@ -76,7 +76,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 3. 模块三：市场热门板块 (手机端高颜值双行 Card 布局，彻底消除挤压折行)
+    # 3. 模块三：市场热门板块 HTML (手机屏极简 Card，双行消除换行)
     sector_cards_html = ""
     for sec in hot_sectors:
         chg = sec.get("change_rate", 0.0)
@@ -100,7 +100,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
         </div>
         """
 
-    # 4. 模块四：成交额 Top 10 个股 (手机端 App 级精美 Card 布局，彻底防止微信水印与表格列压缩错位)
+    # 4. 模块四：成交额 Top 10 个股及所属行业 HTML (100% 输出 10 只个股，Card 卡片防止水印覆盖)
     top10_cards_html = ""
     for stock in top10_turnover:
         rank = stock.get("rank", 1)
