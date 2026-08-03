@@ -85,8 +85,8 @@ def push_to_wxpusher(content_md, title="A股盘后智投与复盘日报"):
 
     # 微信文本字数截断防报错处理
     safe_content = content_md
-    if len(safe_content) > 18000:
-        safe_content = safe_content[:18000] + "\n\n---\n*(核心篇幅较长，已自动截取每日盘后精要，完整报告已同步归档保存至本地 `reports/`)*"
+    if len(safe_content) > 38000:
+        safe_content = safe_content[:38000] + "\n\n---\n*(核心篇幅较长，已自动截取每日盘后精要，完整报告已同步归档保存至本地 `reports/`)*"
 
     # 1. 优先使用 WxPusher 极简 SPT 个人微信推送
     if spt_key:
