@@ -87,7 +87,7 @@ def fetch_index_data():
                         "volume_amount": amt if amt > 0 else curr_amt,
                         "vol_diff": diff_amt,
                         "vol_pct": diff_pct,
-                        "vol_tag": f"🔴放量+{diff_amt:.0f}亿" if diff_amt >= 0 else f"🟢缩量{diff_amt:.0f}亿"
+                        "vol_tag": f"🔴放量+{diff_amt:.1f}亿" if diff_amt >= 0 else f"🟢缩量{diff_amt:.1f}亿"
                     })
                     fetched = True
                     break
