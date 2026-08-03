@@ -20,7 +20,7 @@ def push_to_feishu(content_md, title="A股盘后智投与复盘日报"):
                 "elements": [
                     {
                         "tag": "markdown",
-                        "content": content_md
+                        "content": content_md[:30000]
                     }
                 ]
             }
@@ -42,7 +42,7 @@ def push_to_dingtalk(content_md, title="A股盘后智投与复盘日报"):
             "msgtype": "markdown",
             "markdown": {
                 "title": title,
-                "text": f"### {title}\n\n{content_md}"
+                "text": f"### {title}\n\n{content_md[:20000]}"
             }
         }
         resp = requests.post(Config.DINGTALK_WEBHOOK, json=payload, timeout=10)
@@ -61,7 +61,7 @@ def push_to_wecom(content_md, title="A股盘后智投与复盘日报"):
         payload = {
             "msgtype": "markdown",
             "markdown": {
-                "content": content_md
+                "content": content_md[:4000]
             }
         }
         resp = requests.post(Config.WECOM_WEBHOOK, json=payload, timeout=10)
@@ -83,12 +83,21 @@ def push_to_wxpusher(content_md, title="A股盘后智投与复盘日报"):
     elif app_token and app_token.startswith("SPT_"):
         spt_key = app_token
 
-    # 1. 优先使用 WxPusher 极简 SPT 个人微信推送（100% 成功送达个人微信）
+    # 微信文本字数截断防报错处理
+    safe_content = content_md
+    if len(safe_content) > 18000:
+        safe_content = safe_content[:18000] + "\n\n---\n*(核心篇幅较长，已自动截取每日盘后精要，完整报告已同步归档保存至本地 `reports/`)*"
+
+    # 1. 优先使用 WxPusher 极简 SPT 个人微信推送
     if spt_key:
         try:
-            text_to_send = f"【{title}】\n\n{content_md}"
-            url = f"https://wxpusher.zjiecode.com/api/send/message/{spt_key}/{quote(text_to_send)}"
-            resp = requests.get(url, timeout=10)
+            url = f"https://wxpusher.zjiecode.com/api/send/message/spt/{spt_key}"
+            payload = {
+                "title": title,
+                "content": safe_content,
+                "contentType": 2
+            }
+            resp = requests.post(url, json=payload, timeout=10)
             if resp.status_code == 200 and resp.json().get("code") == 1000:
                 logging.info("✅ WxPusher SPT 极简个人微信推送成功！")
                 return True
@@ -101,7 +110,7 @@ def push_to_wxpusher(content_md, title="A股盘后智投与复盘日报"):
             uids = [u.strip() for u in Config.WXPUSHER_UIDS.split(",") if u.strip()] if Config.WXPUSHER_UIDS else []
             payload = {
                 "appToken": app_token,
-                "content": content_md,
+                "content": safe_content,
                 "summary": title,
                 "contentType": 2,  # 2 表示 Markdown 格式
             }
