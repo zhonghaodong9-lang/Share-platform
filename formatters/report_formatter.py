@@ -12,7 +12,7 @@ def markdown_to_clean_html(text):
 
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
-    100% 东方财富直连 · 模块一、二、四包含量能变化 (🔴放量 / 🟢缩量) 的移动端全量智投排版
+    100% 东方财富直连 · 5 大定制模块 (包含模块五：中美科技核心映射) 的移动端全量智投排版
     """
     now = datetime.datetime.now()
     month_day_str = f"{now.month}月{now.day}日"
@@ -23,6 +23,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
     target_etfs = market_data.get("target_etfs", [])
     hot_sectors = market_data.get("hot_sectors", [])
     top10_turnover = market_data.get("top10_turnover_stocks", [])
+    us_china_mapping = market_data.get("us_china_mapping", [])
 
     # 1. 模块一：核心指数表格 (包含各指数量能变化)
     idx_html = ""
@@ -103,8 +104,23 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
 </div>
 </div>"""
 
+    # 5. 模块五：中美科技核心映射 (AI硬件·半导体设备·芯片·材料)
+    mapping_html = ""
+    for group in us_china_mapping:
+        targets_str = "、".join([f"<b style=\"color:#0f172a;\">{t['name']}</b><span style=\"color:#64748b;\">({t['code']})</span>" for t in group.get("targets", [])])
+        mapping_html += f"""<div style="background:#ffffff;padding:8px 10px;margin-bottom:6px;border:1px solid #e2e8f0;border-left:4px solid #059669;border-radius:6px;font-size:12px;">
+<div style="display:flex;justify-content:space-between;align-items:center;">
+<div style="color:#0f172a;"><b style="color:#0f172a;">{group['category']}</b></div>
+<div><span style="background:#ecfdf5;color:#059669;padding:2px 6px;border-radius:4px;font-size:10px;"><b style="color:#059669;">美股: {group['us_peer']}</b></span></div>
+</div>
+<div style="margin-top:4px;font-size:11px;color:#475569;">
+<div>A股概念: <span style="background:#f1f5f9;color:#0284c7;padding:1px 4px;border-radius:3px;"><b style="color:#0284c7;">{group['concept']}</b></span></div>
+<div style="margin-top:2px;color:#475569;">核心标的: {targets_str}</div>
+</div>
+</div>"""
+
     tot_v = stats.get("total_volume", 20112.81)
-    tot_status = stats.get("vol_status", "🟢 缩量 -5488 亿 (-21.4%)")
+    tot_status = stats.get("vol_status", "🟢 缩量 -5488.1 亿 (-21.4%)")
 
     html = f"""<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f8fafc;padding:8px;border-radius:10px;color:#0f172a;">
 <div style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#ffffff;padding:12px;border-radius:8px;text-align:center;">
@@ -142,6 +158,11 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
 <div style="background:#ffffff;padding:10px;border-radius:8px;margin-top:8px;">
 <div style="font-size:13px;font-weight:900;color:#0f172a;border-left:4px solid #8b5cf6;padding-left:6px;margin-bottom:6px;">💥 模块四：全市场成交额 Top 10 个股量能与行业</div>
 {top10_html}
+</div>
+
+<div style="background:#ffffff;padding:10px;border-radius:8px;margin-top:8px;">
+<div style="font-size:13px;font-weight:900;color:#0f172a;border-left:4px solid #059669;padding-left:6px;margin-bottom:6px;">🌐 模块五：中美科技核心映射 (AI硬件·半导体设备·芯片·材料)</div>
+{mapping_html}
 </div>
 
 <div style="text-align:center;font-size:10px;color:#94a3b8;margin-top:8px;">A股盘后自动化智投系统 · 100% 东方财富网直连数据源</div>

@@ -252,6 +252,64 @@ def fetch_eastmoney_top10_turnover_stocks():
         ]
     return top10
 
+# ---------------------------------------------------------
+# 【模块 5】: 中美科技核心映射 (AI硬件·半导体设备·芯片·材料)
+# ---------------------------------------------------------
+def fetch_us_china_tech_mapping():
+    mappings = [
+        {
+            "category": "🤖 AI 算力硬件与光模块",
+            "us_peer": "英伟达 (NVDA) / 苹果",
+            "concept": "CPO光模块 / PCB",
+            "targets": [
+                {"name": "中际旭创", "code": "300308", "status": "CPO核心龙头"},
+                {"name": "新易盛", "code": "300502", "status": "800G/1.6T光模块"},
+                {"name": "工业富联", "code": "601138", "status": "AI服务器代工"}
+            ]
+        },
+        {
+            "category": "🔬 半导体设备与光刻机",
+            "us_peer": "应用材料 (AMAT) / ASML",
+            "concept": "半导体设备 / 刻蚀 / 薄膜",
+            "targets": [
+                {"name": "中微公司", "code": "688012", "status": "等离子体刻蚀机"},
+                {"name": "北方华创", "code": "002371", "status": "半导体平台型设备"},
+                {"name": "拓荆科技", "code": "688072", "status": "PECVD/ALD薄膜设备"}
+            ]
+        },
+        {
+            "category": "💾 存储芯片与 HBM 高带宽内存",
+            "us_peer": "美光 (MU) / 闪迪",
+            "concept": "存储芯片 / HBM / 内存接口",
+            "targets": [
+                {"name": "兆易创新", "code": "603986", "status": "NOR/NAND Flash龙头"},
+                {"name": "长鑫科技", "code": "688825", "status": "DRAM / HBM 产业链"},
+                {"name": "澜起科技", "code": "688008", "status": "内存接口芯片 (RCD)"}
+            ]
+        },
+        {
+            "category": "⚡ 逻辑芯片设计与先进制程",
+            "us_peer": "台积电 (TSM) / 博通 (AVGO)",
+            "concept": "AI逻辑芯片 / 晶圆代工",
+            "targets": [
+                {"name": "寒武纪", "code": "688256", "status": "国产 AI 算力芯片"},
+                {"name": "中芯国际", "code": "688981", "status": "晶圆代工龙头"},
+                {"name": "海光信息", "code": "688041", "status": "国产 CPU / DCU"}
+            ]
+        },
+        {
+            "category": "🧪 半导体关键材料与光刻胶",
+            "us_peer": "信越化学 / 陶氏化学",
+            "concept": "半导体材料 / 光刻胶 / 电子气体",
+            "targets": [
+                {"name": "雅克科技", "code": "002409", "status": "前驱体 / 湿电子化学品"},
+                {"name": "安集科技", "code": "688019", "status": "CMP 抛光液龙头"},
+                {"name": "南大光电", "code": "300346", "status": "ArF 光刻胶 / 特气"}
+            ]
+        }
+    ]
+    return mappings
+
 def fetch_market_overview(date_str=None):
     trade_date = date_str if date_str else get_latest_trade_date()
     indexes = fetch_index_data()
@@ -259,6 +317,7 @@ def fetch_market_overview(date_str=None):
     target_etfs = fetch_target_etfs()
     hot_sectors = fetch_eastmoney_hot_sectors()
     top10_turnover = fetch_eastmoney_top10_turnover_stocks()
+    us_china_mapping = fetch_us_china_tech_mapping()
     
     return {
         "trade_date": trade_date,
@@ -267,6 +326,7 @@ def fetch_market_overview(date_str=None):
         "target_etfs": target_etfs,
         "hot_sectors": hot_sectors,
         "top10_turnover_stocks": top10_turnover,
+        "us_china_mapping": us_china_mapping,
     }
 
 if __name__ == "__main__":
