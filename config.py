@@ -11,8 +11,8 @@ class Config:
     WECOM_WEBHOOK = os.getenv("WECOM_WEBHOOK", "")
     
     # 微信专用推送配置
-    WXPUSHER_APP_TOKEN = os.getenv("WXPUSHER_APP_TOKEN", "")
-    WXPUSHER_UIDS = os.getenv("WXPUSHER_UIDS", "")
+    WXPUSHER_APP_TOKEN = os.getenv("WXPUSHER_APP_TOKEN", "AT_c90wajU5mczqv3HhaYe9RpopYDYHjGta")
+    WXPUSHER_UIDS = os.getenv("WXPUSHER_UIDS", "UID_6KxduFL4ygE3cJVrgOfmzbrN4t8F")
     SERVERCHAN_SENDKEY = os.getenv("SERVERCHAN_SENDKEY", "")
 
     # --- AI 大模型智投引擎配置 ---
