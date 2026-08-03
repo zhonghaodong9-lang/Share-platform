@@ -5,7 +5,7 @@ from config import Config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def push_to_feishu(content_md, title="A股盘后智投与复盘日报"):
+def push_to_feishu(content_md, title="15:10 消息回顾"):
     """推送至飞书机器人 Webhook"""
     if not Config.FEISHU_WEBHOOK:
         return False
@@ -33,7 +33,7 @@ def push_to_feishu(content_md, title="A股盘后智投与复盘日报"):
         logging.error(f"飞书推送失败: {e}")
     return False
 
-def push_to_dingtalk(content_md, title="A股盘后智投与复盘日报"):
+def push_to_dingtalk(content_md, title="15:10 消息回顾"):
     """推送至钉钉机器人 Webhook"""
     if not Config.DINGTALK_WEBHOOK:
         return False
@@ -53,7 +53,7 @@ def push_to_dingtalk(content_md, title="A股盘后智投与复盘日报"):
         logging.error(f"钉钉推送失败: {e}")
     return False
 
-def push_to_wecom(content_md, title="A股盘后智投与复盘日报"):
+def push_to_wecom(content_md, title="15:10 消息回顾"):
     """推送至企业微信 Webhook"""
     if not Config.WECOM_WEBHOOK:
         return False
@@ -72,7 +72,7 @@ def push_to_wecom(content_md, title="A股盘后智投与复盘日报"):
         logging.error(f"企业微信推送失败: {e}")
     return False
 
-def push_to_wxpusher(content_md, title="A股盘后智投与复盘日报"):
+def push_to_wxpusher(content_md, title="15:10 消息回顾"):
     """推送至 WxPusher 微信推送平台 (完美支持 SPT 极简个人推送 与 标准 AppToken 推送)"""
     app_token = Config.WXPUSHER_APP_TOKEN
     serverchan_key = Config.SERVERCHAN_SENDKEY
@@ -131,7 +131,7 @@ def push_to_wxpusher(content_md, title="A股盘后智投与复盘日报"):
 
     return False
 
-def push_all_channels(content_md, title="A股盘后智投与复盘日报"):
+def push_all_channels(content_md, title="15:10 消息回顾"):
     """按配置自动广播推送至所有已配置的渠道"""
     results = {}
     if Config.FEISHU_WEBHOOK:

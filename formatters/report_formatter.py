@@ -16,7 +16,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
     """
     now = datetime.datetime.now()
     month_day_str = f"{now.month}月{now.day}日"
-    report_title = f"📈 A股{month_day_str}东方财富直连·复盘智投"
+    report_title = f"📈 15:10 消息回顾 ({month_day_str})"
 
     indexes = market_data.get("indexes", [])
     stats = market_data.get("stats", {})
