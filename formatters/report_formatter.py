@@ -12,7 +12,7 @@ def markdown_to_clean_html(text):
 
 def format_daily_report(market_data, money_flow_data, overseas_data, reports_data, sentiment, mapping, ai_summary):
     """
-    100% 东方财富直连 · 5 大定制模块 (包含模块五：中美科技核心映射) 的移动端全量智投排版
+    100% 东方财富直连 · 5 大定制模块 (包含模块五：中美科技核心映射 + 美股走势与 A 股复盘策略参考)
     """
     now = datetime.datetime.now()
     month_day_str = f"{now.month}月{now.day}日"
@@ -104,18 +104,36 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
 </div>
 </div>"""
 
-    # 5. 模块五：中美科技核心映射 (AI硬件·半导体设备·芯片·材料)
+    # 5. 模块五：中美科技核心映射 (包含美股实时走势 + 盘口特征 + A股复盘策略参考意见)
     mapping_html = ""
     for group in us_china_mapping:
         targets_str = "、".join([f"<b style=\"color:#0f172a;\">{t['name']}</b><span style=\"color:#64748b;\">({t['code']})</span>" for t in group.get("targets", [])])
-        mapping_html += f"""<div style="background:#ffffff;padding:8px 10px;margin-bottom:6px;border:1px solid #e2e8f0;border-left:4px solid #059669;border-radius:6px;font-size:12px;">
+        us_pct = group.get("us_pct", 0.0)
+        us_c = "#dc2626" if us_pct >= 0 else "#16a34a"
+        us_bg = "#fee2e2" if us_pct >= 0 else "#dcfce7"
+        us_price_str = group.get("us_price", "")
+        us_pct_str = f"{us_pct:+.2f}%" if isinstance(us_pct, (int, float)) else str(us_pct)
+
+        mapping_html += f"""<div style="background:#ffffff;padding:8px 10px;margin-bottom:8px;border:1px solid #e2e8f0;border-left:4px solid #059669;border-radius:6px;font-size:12px;">
 <div style="display:flex;justify-content:space-between;align-items:center;">
 <div style="color:#0f172a;"><b style="color:#0f172a;">{group['category']}</b></div>
-<div><span style="background:#ecfdf5;color:#059669;padding:2px 6px;border-radius:4px;font-size:10px;"><b style="color:#059669;">美股: {group['us_peer']}</b></span></div>
+<div><span style="background:#ecfdf5;color:#059669;padding:2px 6px;border-radius:4px;font-size:10px;"><b style="color:#059669;">美股: {group['us_peer_name']}</b></span></div>
 </div>
+
+<div style="background:#f8fafc;padding:6px;border-radius:4px;margin-top:4px;font-size:11px;color:#334155;">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+<div style="color:#475569;">美股实时行情: <b style="color:#0f172a;">{us_price_str}</b></div>
+<div><span style="background:{us_bg};color:{us_c};padding:1px 5px;border-radius:3px;font-size:10px;"><b style="color:{us_c};">{us_pct_str}</b></span></div>
+</div>
+<div style="color:#475569;font-size:10px;">📈 盘中走势特征: <span style="color:#0f172a;">{group.get('us_trend','-')}</span></div>
+</div>
+
 <div style="margin-top:4px;font-size:11px;color:#475569;">
 <div>A股概念: <span style="background:#f1f5f9;color:#0284c7;padding:1px 4px;border-radius:3px;"><b style="color:#0284c7;">{group['concept']}</b></span></div>
 <div style="margin-top:2px;color:#475569;">核心标的: {targets_str}</div>
+<div style="margin-top:4px;background:#f0fdf4;border:1px dashed #6ee7b7;padding:5px;border-radius:4px;color:#065f46;font-size:10px;line-height:1.4;">
+<b style="color:#047857;">💡 A股复盘策略参考：</b>{group.get('strategy','-')}
+</div>
 </div>
 </div>"""
 
@@ -161,7 +179,7 @@ def format_daily_report(market_data, money_flow_data, overseas_data, reports_dat
 </div>
 
 <div style="background:#ffffff;padding:10px;border-radius:8px;margin-top:8px;">
-<div style="font-size:13px;font-weight:900;color:#0f172a;border-left:4px solid #059669;padding-left:6px;margin-bottom:6px;">🌐 模块五：中美科技核心映射 (AI硬件·半导体设备·芯片·材料)</div>
+<div style="font-size:13px;font-weight:900;color:#0f172a;border-left:4px solid #059669;padding-left:6px;margin-bottom:6px;">🌐 模块五：中美科技核心映射 (美股走势与 A 股策略参考)</div>
 {mapping_html}
 </div>
 

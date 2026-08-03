@@ -6,7 +6,7 @@ import logging
 import datetime
 import requests
 import re
-import pandas as pd
+from bs4 import BeautifulSoup
 
 try:
     import akshare as ak
@@ -15,18 +15,18 @@ except ImportError:
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# 核心行业热点关键词映射字典（用于新闻归类与利好行业提取）
+# 核心行业热点关键词映射字典
 INDUSTRY_KEYWORDS = {
     "AI与算力": ["AI", "算力", "大模型", "CPO", "光模块", "服务器", "芯片", "英伟达", "ChatGPT", "人工智能", "液冷"],
-    "半导体与集成电路": ["半导体", "晶圆", "光刻机", "先进封装", "存储", "芯片", "中芯", "台积电", "ASML"],
+    "半导体与集成电路": ["半导体", "晶圆", "光刻机", "先进封装", "存储", "芯片", "中芯", "台积电", "ASML", "集成电路"],
     "机器人与具身智能": ["机器人", "人形机器人", "减速器", "丝杠", "伺服", "具身智能", "特斯拉Optimus"],
     "低空经济与飞行汽车": ["低空经济", "eVTOL", "无人机", "通航", "空域", "飞行汽车"],
-    "新能源与电池": ["固态电池", "锂电池", "光伏", "风电", "储能", "钠电池", "特斯拉", "充电桩", "氢能"],
+    "新能源与电池": ["固态电池", "锂电池", "光伏", "风电", "储能", "钠电池", "特斯拉", "充电桩", "氢能", "电力"],
     "汽车与智慧出行": ["智能驾驶", "自动驾驶", "新能源汽车", "车联网", "华为智驾", "比亚迪", "小米汽车"],
     "医药与创新药": ["创新药", "CXO", "减重药", "GLP-1", "医疗器械", "生物医药", "FDA", "肿瘤"],
     "军工与商业航天": ["商业航天", "卫星互联网", "千帆星座", "军工", "国防", "火箭", "低轨卫星"],
     "消费与电子": ["消费电子", "苹果", "折叠屏", "华为新机", "智能穿戴", "家电以旧换新", "消费"],
-    "大金融与中字头": ["证券", "券商", "银行", "保险", "中字头", "国企改革", "央企", "互换便利"]
+    "大金融与中字头": ["证券", "券商", "银行", "保险", "中字头", "国企改革", "央企", "互换便利", "分红"]
 }
 
 def classify_industry(title_and_content: str):
@@ -39,122 +39,178 @@ def classify_industry(title_and_content: str):
                 break
     return matched if matched else ["宏观政策与综合行业"]
 
-def fetch_premarket_news(top_n=20):
-    """
-    抓取隔夜及盘前（15:00 ~ 次日 08:30）行业热点快讯与重要新闻
-    支持 AkShare + 新浪/东财 7x24 双通道获取与清洗
-    """
-    news_list = []
-    logging.info("🌐 正在从多源（Sina/EastMoney/CLS 7x24）抓取盘前行业热点新闻...")
 
-    # 通道 1: 新浪 7x24 财经快讯 (via AkShare)
-    if ak is not None:
-        try:
-            df_sina = ak.stock_info_global_sina()
-            if df_sina is not None and not df_sina.empty:
-                for idx, row in df_sina.head(top_n * 2).iterrows():
-                    time_str = str(row.get("时间", str(row.get("publish_time", ""))))
-                    content = str(row.get("内容", str(row.get("content", ""))))
-                    title = content[:40] + "..." if len(content) > 40 else content
-                    
-                    industries = classify_industry(content)
-                    news_list.append({
-                        "title": title,
-                        "content": content,
-                        "time": time_str,
-                        "source": "新浪7x24",
-                        "industries": industries
+def fetch_from_cls():
+    """100% 调取 财联社 (https://www.cls.cn/) 数据"""
+    cls_news = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://www.cls.cn/"
+    }
+    s = requests.Session()
+    s.trust_env = False
+
+    # 通道 1: 抓取 cls.cn 静态 HTML / 深度要闻
+    try:
+        r_html = s.get("https://www.cls.cn/", headers=headers, timeout=6)
+        r_html.encoding = "utf-8"
+        soup = BeautifulSoup(r_html.text, "html.parser")
+        for a in soup.find_all("a"):
+            text = a.get_text(strip=True)
+            href = a.get("href", "")
+            if len(text) > 8 and ("/detail/" in href or "/telegraph" in href or "cls.cn" in href):
+                if text not in [n["title"] for n in cls_news] and not any(kw in text for kw in ["APP", "关于我们", "下载"]):
+                    full_url = href if href.startswith("http") else "https://www.cls.cn" + href
+                    cls_news.append({
+                        "title": text,
+                        "content": text,
+                        "time": datetime.datetime.now().strftime("%H:%M"),
+                        "source": "财联社 (cls.cn)",
+                        "url": full_url,
+                        "industries": classify_industry(text)
                     })
-                if news_list:
-                    logging.info(f"✅ 从新浪 7x24 快讯成功采集到 {len(news_list)} 条实时盘前快讯")
-        except Exception as e:
-            logging.warning(f"AkShare 新浪 7x24 抓取尝试: {e}")
+    except Exception as e:
+        logging.warning(f"cls.cn HTML抓取: {e}")
 
-    # 通道 2: 东方财富 7x24 快讯直连 API (备用)
-    if len(news_list) < 5:
+    # 通道 2: AkShare 财联社 7x24
+    if ak is not None and len(cls_news) < 5:
         try:
-            url = "https://np-fastnews.eastmoney.com/api/Client/GetNewsList?limit=30&page=1&type=0"
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36",
-                "Referer": "https://kuaixun.eastmoney.com/"
-            }
-            session = requests.Session()
-            session.trust_env = False
-            resp = session.get(url, headers=headers, timeout=5)
-            if resp.status_code == 200:
-                res_data = resp.json()
-                items = res_data.get("data", {}).get("news_list", []) or res_data.get("data", [])
-                for item in items:
-                    title = item.get("title", "") or item.get("digest", "")
-                    content = item.get("digest", "") or title
-                    show_time = item.get("show_time", "")
-                    if title:
-                        industries = classify_industry(title + content)
-                        news_list.append({
+            df_cls = ak.stock_info_global_cls()
+            if df_cls is not None and not df_cls.empty:
+                for idx, row in df_cls.head(15).iterrows():
+                    content = str(row.get("内容", str(row.get("content", ""))))
+                    time_str = str(row.get("发布时间", str(row.get("time", ""))))
+                    title = content[:45] + "..." if len(content) > 45 else content
+                    if content and title not in [n["title"] for n in cls_news]:
+                        cls_news.append({
                             "title": title,
                             "content": content,
-                            "time": show_time,
-                            "source": "东方财富7x24",
-                            "industries": industries
+                            "time": time_str,
+                            "source": "财联社 (cls.cn)",
+                            "url": "https://www.cls.cn/telegraph",
+                            "industries": classify_industry(content)
                         })
-                if news_list:
-                    logging.info(f"✅ 从东方财富 7x24 成功补充采集数据，共计 {len(news_list)} 条")
         except Exception as e:
-            logging.warning(f"东方财富 7x24 API 抓取尝试: {e}")
+            logging.warning(f"cls.cn AkShare: {e}")
 
-    # 数据去重与筛选
+    logging.info(f"✅ 财联社 (https://www.cls.cn/) 成功调取 {len(cls_news)} 条真实新闻")
+    return cls_news
+
+
+def fetch_from_eastmoney():
+    """100% 调取 东方财富网 (https://www.eastmoney.com/default.html) 数据"""
+    em_news = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://www.eastmoney.com/default.html"
+    }
+    s = requests.Session()
+    s.trust_env = False
+
+    try:
+        r_em = s.get("https://www.eastmoney.com/default.html", headers=headers, timeout=6)
+        r_em.encoding = "utf-8"
+        soup_em = BeautifulSoup(r_em.text, "html.parser")
+        
+        for a in soup_em.find_all("a", href=re.compile(r"eastmoney\.com/a/\d+")):
+            title = a.get_text(strip=True)
+            href = a.get("href", "")
+            if len(title) > 8 and title not in [n["title"] for n in em_news]:
+                em_news.append({
+                    "title": title,
+                    "content": title,
+                    "time": datetime.datetime.now().strftime("%H:%M"),
+                    "source": "东方财富网 (eastmoney.com)",
+                    "url": href,
+                    "industries": classify_industry(title)
+                })
+
+        # 结合东财 7x24 API
+        if len(em_news) < 10:
+            em_api = "https://np-fastnews.eastmoney.com/api/Client/GetNewsList?limit=20&page=1&type=0"
+            r_api = s.get(em_api, headers=headers, timeout=6)
+            if r_api.status_code == 200:
+                res_data = r_api.json()
+                items = res_data.get("data", {}).get("news_list", []) or res_data.get("data", [])
+                for item in items:
+                    t = item.get("title", "") or item.get("digest", "")
+                    show_time = item.get("show_time", "")
+                    if t and t not in [n["title"] for n in em_news]:
+                        em_news.append({
+                            "title": t,
+                            "content": item.get("digest", t),
+                            "time": show_time,
+                            "source": "东方财富网 (eastmoney.com)",
+                            "url": "https://kuaixun.eastmoney.com/",
+                            "industries": classify_industry(t)
+                        })
+    except Exception as e:
+        logging.warning(f"eastmoney.com 抓取异常: {e}")
+
+    logging.info(f"✅ 东方财富网 (https://www.eastmoney.com/) 成功调取 {len(em_news)} 条真实新闻")
+    return em_news
+
+
+def fetch_from_10jqka():
+    """100% 调取 同花顺 (https://www.10jqka.com.cn/) 数据"""
+    ths_news = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://www.10jqka.com.cn/"
+    }
+    s = requests.Session()
+    s.trust_env = False
+
+    try:
+        r_ths = s.get("https://news.10jqka.com.cn/", headers=headers, timeout=6)
+        content_text = r_ths.content.decode("gbk", errors="ignore")
+        soup_ths = BeautifulSoup(content_text, "html.parser")
+        
+        for a in soup_ths.find_all("a", href=re.compile(r"10jqka\.com\.cn/\d+/\w+")):
+            title = a.get_text(strip=True)
+            href = a.get("href", "")
+            if len(title) > 8 and not any(kw in title for kw in ["登录", "注册", "软件", "App", "同花顺", "首页", "服务", "下载"]):
+                if title not in [n["title"] for n in ths_news]:
+                    ths_news.append({
+                        "title": title,
+                        "content": title,
+                        "time": datetime.datetime.now().strftime("%H:%M"),
+                        "source": "同花顺 (10jqka.com.cn)",
+                        "url": href,
+                        "industries": classify_industry(title)
+                    })
+    except Exception as e:
+        logging.warning(f"10jqka.com.cn 抓取异常: {e}")
+
+    logging.info(f"✅ 同花顺 (https://www.10jqka.com.cn/) 成功调取 {len(ths_news)} 条真实新闻")
+    return ths_news
+
+
+def fetch_premarket_news(top_n=20):
+    """
+    100% 调取指定三大网站（cls.cn, eastmoney.com, 10jqka.com.cn）真实盘前新闻
+    """
+    logging.info("🌐 正在从 [财联社 cls.cn]、[东方财富 eastmoney.com]、[同花顺 10jqka.com.cn] 调取真实业务数据...")
+    
+    cls_data = fetch_from_cls()
+    em_data = fetch_from_eastmoney()
+    ths_data = fetch_from_10jqka()
+
+    all_news = cls_data + em_data + ths_data
+
+    # 去重与清洗
     seen_titles = set()
     unique_news = []
-    for item in news_list:
-        clean_title = re.sub(r'[^\w\u4e00-\u9fa5]', '', item['title'][:20])
+    for item in all_news:
+        clean_title = re.sub(r'[^\w\u4e00-\u9fa5]', '', item['title'][:25])
         if clean_title not in seen_titles and len(clean_title) > 5:
             seen_titles.add(clean_title)
             unique_news.append(item)
 
-    # 如果抓取结果较少，提供涵盖当前市场热门主题的高质量保底盘前新闻
-    if len(unique_news) < 5:
-        logging.warning("⚠️ 网络抓取新闻量不足，启用盘前行业热点保底数据集...")
-        today_date = datetime.datetime.now().strftime("%Y-%m-%d")
-        unique_news = [
-            {
-                "title": "工信部深化工业互联网与 AI 融合，算力与高端芯片需求持续爆发",
-                "content": "工信部等部门印发最新指导意见，推动大模型在制造业深度落地，加快算力中心建设与 CPO 光模块技术革新。",
-                "time": f"{today_date} 07:30",
-                "source": "核心盘前头条",
-                "industries": ["AI与算力", "半导体与集成电路"]
-            },
-            {
-                "title": "固态电池突破商业化前夕，头部车企拟于下半年搭载测试",
-                "content": "多家电池巨头宣布全固态电池样品测试通过，能量密度提升 50%，板块情绪将受显著提振。",
-                "time": f"{today_date} 07:45",
-                "source": "行业快讯",
-                "industries": ["新能源与电池", "汽车与智慧出行"]
-            },
-            {
-                "title": "人形机器人产业供应链加速对接，关键减速器与丝杠厂商送样通过",
-                "content": "海外知名车企及机器人厂商更新供应链名片，国产核心零部件企业在精度与成本上具备强竞争力。",
-                "time": f"{today_date} 08:00",
-                "source": "题材前瞻",
-                "industries": ["机器人与具身智能"]
-            },
-            {
-                "title": "低空经济多地出台配套支持资金，通航及飞行汽车试点进一步扩大",
-                "content": "多地交通运输部门发布低空基础设施建设规划，eVTOL 试飞许可与航线规划提速。",
-                "time": f"{today_date} 08:15",
-                "source": "政策解读",
-                "industries": ["低空经济与飞行汽车"]
-            },
-            {
-                "title": "创新药出海授权许可（BD）金额再创历史新高，估值迎来双重修复",
-                "content": "本土多款 oncology 及减重药（GLP-1）双靶点创新药成功将海外权益授权予全球药企巨头。",
-                "time": f"{today_date} 08:20",
-                "source": "券商晨报",
-                "industries": ["医药与创新药"]
-            }
-        ]
-
+    logging.info(f"🎉 三大网站合计成功调取 {len(unique_news)} 条真实数据！")
     return unique_news[:top_n]
+
 
 if __name__ == "__main__":
     import pprint
-    pprint.pprint(fetch_premarket_news(5))
+    pprint.pprint(fetch_premarket_news(10))
