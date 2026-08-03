@@ -3,31 +3,44 @@ os.environ["NO_PROXY"] = "*"
 os.environ["no_proxy"] = "*"
 
 import logging
-import socket
 import requests
-import akshare as ak
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def fetch_research_reports(top_n=10):
-    """获取最新投行/券商个股与行业研报精选"""
+    """
+    100% 直连东方财富网数据中心 (datacenter-web.eastmoney.com) 获取最新券商研报精选
+    """
     reports = []
-    
-    # 设置全域套接字超时，防止网络卡顿
-    socket.setdefaulttimeout(5)
-    try:
-        df_reports = ak.stock_research_report_em()
-        if df_reports is not None and not df_reports.empty:
-            for idx, row in df_reports.head(top_n).iterrows():
-                reports.append({
-                    "title": str(row.get("研报名称", row.get("文章标题", "行业深度分析与投资建议"))),
-                    "stock_name": str(row.get("股票名称", "重点标的")),
-                    "institution": str(row.get("机构名称", "知名券商")),
-                    "rating": str(row.get("东财评级", row.get("评级变动", "看好"))),
-                    "date": str(row.get("发布日期", "今日")),
-                })
-    except Exception as e:
-        logging.warning(f"获取东方财富研报触发超时或异常，自动装载机构研研智投库: {e}")
+    url = f"https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_WEB_NREPORT&columns=ALL&pageNumber=1&pageSize={top_n}&sortColumns=PUBLISH_DATE&sortTypes=-1"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://data.eastmoney.com/"
+    }
+
+    # 尝试直连与代理防护双通道
+    for p_opt in [None, {"http": "http://127.0.0.1:7897", "https": "http://127.0.0.1:7897"}]:
+        try:
+            session = requests.Session()
+            session.trust_env = False
+            resp = session.get(url, headers=headers, proxies=p_opt, timeout=5)
+            if resp.status_code == 200:
+                res_json = resp.json()
+                if res_json and res_json.get("result"):
+                    data_list = res_json["result"].get("data", [])
+                    for item in data_list:
+                        reports.append({
+                            "title": str(item.get("TITLE", "行业研报与投资建议")),
+                            "stock_name": str(item.get("STOCK_NAME", "重点标的")),
+                            "institution": str(item.get("ORG_NAME", "知名券商")),
+                            "rating": str(item.get("EM_RATING_NAME", "看好")),
+                            "date": str(item.get("PUBLISH_DATE", ""))[:10],
+                        })
+                    if reports:
+                        logging.info("✅ 100% 成功从东方财富网获取最新券商研报数据")
+                        return reports
+        except Exception as e:
+            logging.warning(f"直连东方财富研报中心通道尝试: {e}")
 
     if not reports:
         reports = [
@@ -40,4 +53,5 @@ def fetch_research_reports(top_n=10):
     return reports
 
 if __name__ == "__main__":
-    print(fetch_research_reports())
+    import pprint
+    pprint.pprint(fetch_research_reports())
