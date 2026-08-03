@@ -29,20 +29,23 @@ def get_today_date_str():
     return get_latest_trade_date()
 
 def get_kline_volume_change(secid):
-    """获取标的近 2 日日K数据，计算放量/缩量数值 (亿元) 与变动比例 (%)"""
+    """
+    100% 直连模式获取标的近 2 日日K数据，计算放量/缩量数值 (亿元) 与变动比例 (%)
+    直连优先防止死代理导致请求超时返回 0
+    """
     url = f"http://push2his.eastmoney.com/api/qt/stock/kline/get?secid={secid}&klt=101&fqt=1&lmt=2&end=20500101&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
-    for proxy_opt in [p, None]:
+    session = requests.Session()
+    session.trust_env = False
+    
+    # 必须直连优先 [None, p]，彻底杜绝代理超时返回 0.0 的 Bug
+    for proxy_opt in [None, p]:
         try:
-            session = requests.Session()
-            session.trust_env = False
             r = session.get(url, headers=headers, proxies=proxy_opt, timeout=3)
             if r.status_code == 200 and r.json().get("data"):
                 klines = r.json()["data"].get("klines", [])
                 if len(klines) >= 2:
-                    prev_parts = klines[-2].split(",")
-                    curr_parts = klines[-1].split(",")
-                    prev_amt = float(prev_parts[6]) / 1e8
-                    curr_amt = float(curr_parts[6]) / 1e8
+                    prev_amt = float(klines[-2].split(",")[6]) / 1e8
+                    curr_amt = float(klines[-1].split(",")[6]) / 1e8
                     diff_amt = curr_amt - prev_amt
                     diff_pct = (diff_amt / prev_amt * 100.0) if prev_amt > 0 else 0.0
                     return curr_amt, diff_amt, diff_pct
@@ -68,10 +71,10 @@ def fetch_index_data():
     for name, secid, code in indexes:
         url = f"http://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f57,f58,f43,f170,f168,f169,f171,f167,f162,f44,f45,f46,f47,f48,f60"
         fetched = False
-        for proxy_opt in [p, None]:
+        session = requests.Session()
+        session.trust_env = False
+        for proxy_opt in [None, p]:
             try:
-                session = requests.Session()
-                session.trust_env = False
                 r = session.get(url, headers=headers, proxies=proxy_opt, timeout=3)
                 if r.status_code == 200 and r.json().get("data"):
                     d = r.json()["data"]
@@ -79,6 +82,14 @@ def fetch_index_data():
                     pct = d.get("f170", 0) / 100.0 if d.get("f170") else 0.0
                     amt = float(d.get("f48", 0)) / 1e8
                     curr_amt, diff_amt, diff_pct = get_kline_volume_change(secid)
+                    
+                    if diff_amt > 0.01:
+                        vol_tag = f"🔴放量+{diff_amt:.1f}亿"
+                    elif diff_amt < -0.01:
+                        vol_tag = f"🟢缩量{diff_amt:.1f}亿"
+                    else:
+                        vol_tag = "⚪持平"
+
                     results.append({
                         "name": name,
                         "code": code,
@@ -87,7 +98,7 @@ def fetch_index_data():
                         "volume_amount": amt if amt > 0 else curr_amt,
                         "vol_diff": diff_amt,
                         "vol_pct": diff_pct,
-                        "vol_tag": f"🔴放量+{diff_amt:.1f}亿" if diff_amt >= 0 else f"🟢缩量{diff_amt:.1f}亿"
+                        "vol_tag": vol_tag
                     })
                     fetched = True
                     break
@@ -96,11 +107,11 @@ def fetch_index_data():
 
     if not results:
         results = [
-            {"name": "上证指数", "code": "000001", "latest": 3809.66, "change_rate": -0.59, "volume_amount": 9522.57, "vol_diff": -2354.25, "vol_pct": -19.8, "vol_tag": "🟢缩量-2354亿"},
-            {"name": "深证成指", "code": "399001", "latest": 13448.29, "change_rate": -0.96, "volume_amount": 10451.29, "vol_diff": -3091.38, "vol_pct": -22.8, "vol_tag": "🟢缩量-3091亿"},
-            {"name": "创业板指", "code": "399006", "latest": 3302.55, "change_rate": -1.24, "volume_amount": 4897.20, "vol_diff": -1849.28, "vol_pct": -27.4, "vol_tag": "🟢缩量-1849亿"},
-            {"name": "科创50", "code": "000688", "latest": 1552.89, "change_rate": -5.08, "volume_amount": 1245.11, "vol_diff": -384.65, "vol_pct": -23.6, "vol_tag": "🟢缩量-385亿"},
-            {"name": "北证50", "code": "899050", "latest": 1076.07, "change_rate": -0.66, "volume_amount": 138.95, "vol_diff": -42.47, "vol_pct": -23.4, "vol_tag": "🟢缩量-42亿"},
+            {"name": "上证指数", "code": "000001", "latest": 3809.66, "change_rate": -0.59, "volume_amount": 9522.57, "vol_diff": -2354.25, "vol_pct": -19.8, "vol_tag": "🟢缩量-2354.3亿"},
+            {"name": "深证成指", "code": "399001", "latest": 13448.29, "change_rate": -0.96, "volume_amount": 10451.29, "vol_diff": -3091.38, "vol_pct": -22.8, "vol_tag": "🟢缩量-3091.4亿"},
+            {"name": "创业板指", "code": "399006", "latest": 3302.55, "change_rate": -1.24, "volume_amount": 4897.20, "vol_diff": -1849.28, "vol_pct": -27.4, "vol_tag": "🟢缩量-1849.3亿"},
+            {"name": "科创50", "code": "000688", "latest": 1552.89, "change_rate": -5.08, "volume_amount": 1245.11, "vol_diff": -384.65, "vol_pct": -23.6, "vol_tag": "🟢缩量-384.7亿"},
+            {"name": "北证50", "code": "899050", "latest": 1076.07, "change_rate": -0.66, "volume_amount": 138.95, "vol_diff": -42.47, "vol_pct": -23.4, "vol_tag": "🟢缩量-42.5亿"},
         ]
     return results
 
@@ -112,7 +123,7 @@ def fetch_market_statistics():
         "total_volume": 20112.81,    # 三市总成交 2.0113 万亿
         "volume_diff": -5488.10,     # 三市量能变动 -5488.1 亿元
         "volume_diff_pct": -21.4,
-        "vol_status": "🟢 缩量 -5488 亿 (-21.4%)",
+        "vol_status": "🟢 缩量 -5488.1 亿 (-21.4%)",
         "up_limit_count": 78,
         "down_limit_count": 6,
         "bomb_rate": 17.58,
@@ -134,13 +145,14 @@ def fetch_target_etfs():
         ("通信ETF国泰", "1.515880", "515880")
     ]
     results = []
+    session = requests.Session()
+    session.trust_env = False
+
     for name, secid, code in etfs:
         url = f"http://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f57,f58,f43,f170,f168,f169,f171,f167,f162,f44,f45,f46,f47,f48,f60"
         fetched = False
-        for proxy_opt in [p, None]:
+        for proxy_opt in [None, p]:
             try:
-                session = requests.Session()
-                session.trust_env = False
                 r = session.get(url, headers=headers, proxies=proxy_opt, timeout=3)
                 if r.status_code == 200 and r.json().get("data"):
                     d = r.json()["data"]
@@ -149,10 +161,12 @@ def fetch_target_etfs():
                     amt = float(d.get("f48", 0)) / 1e8
                     curr_amt, diff_amt, diff_pct = get_kline_volume_change(secid)
                     
-                    if diff_amt >= 0:
+                    if diff_amt > 0.01:
                         vol_tag = f"🔴 放量 +{diff_amt:.2f}亿 (+{diff_pct:.1f}%)"
-                    else:
+                    elif diff_amt < -0.01:
                         vol_tag = f"🟢 缩量 {diff_amt:.2f}亿 ({diff_pct:.1f}%)"
+                    else:
+                        vol_tag = "⚪ 量能持平"
 
                     results.append({
                         "name": name,
@@ -186,10 +200,10 @@ def fetch_target_etfs():
 def fetch_eastmoney_hot_sectors():
     url_board = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=8&po=1&np=1&ut=bd199837b29a737c473157207fe0b06f&fltt=2&invt=2&fid=f3&fs=m:90+t:2+f:!50&fields=f2,f3,f12,f14,f62,f128,f140"
     sectors = []
-    for proxy_opt in [p, None]:
+    session = requests.Session()
+    session.trust_env = False
+    for proxy_opt in [None, p]:
         try:
-            session = requests.Session()
-            session.trust_env = False
             r = session.get(url_board, headers=headers, proxies=proxy_opt, timeout=4)
             if r.status_code == 200 and r.json().get("data"):
                 data = r.json()["data"].get("diff", [])
@@ -222,10 +236,10 @@ def fetch_eastmoney_hot_sectors():
 def fetch_eastmoney_top10_turnover_stocks():
     url_top10 = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=10&po=1&np=1&ut=bd199837b29a737c473157207fe0b06f&fltt=2&invt=2&fid=f6&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f2,f3,f6,f12,f13,f14,f100,f102,f103"
     top10 = []
-    for proxy_opt in [p, None]:
+    session = requests.Session()
+    session.trust_env = False
+    for proxy_opt in [None, p]:
         try:
-            session = requests.Session()
-            session.trust_env = False
             r = session.get(url_top10, headers=headers, proxies=proxy_opt, timeout=4)
             if r.status_code == 200 and r.json().get("data"):
                 data = r.json()["data"].get("diff", [])
@@ -236,10 +250,12 @@ def fetch_eastmoney_top10_turnover_stocks():
                     amt = float(item.get("f6", 0)) / 1e8
                     curr_amt, diff_amt, diff_pct = get_kline_volume_change(secid)
 
-                    if diff_amt >= 0:
+                    if diff_amt > 0.01:
                         vol_tag = f"🔴放量+{diff_amt:.1f}亿"
-                    else:
+                    elif diff_amt < -0.01:
                         vol_tag = f"🟢缩量{diff_amt:.1f}亿"
+                    else:
+                        vol_tag = "⚪持平"
 
                     top10.append({
                         "rank": idx,
